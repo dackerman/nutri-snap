@@ -42,7 +42,8 @@ export const insertMealSchema = createInsertSchema(meals).omit({
 export const mealAnalysisSchema = z.object({
   calories: z.number(),
   fat: z.number(),
-  carbs: z.number()
+  carbs: z.number(),
+  foodName: z.string().optional()
 });
 
 export type InsertMeal = z.infer<typeof insertMealSchema>;

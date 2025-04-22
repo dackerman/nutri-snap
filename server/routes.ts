@@ -75,6 +75,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const mealData = {
         userId: req.user?.id,
         mealType: req.body.mealType,
+        foodName: req.body.foodName || "",
         description: req.body.description || "",
         imageUrl: "", // Will be populated with base64 string
         calories: 0, // Will be populated by AI analysis

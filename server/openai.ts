@@ -8,8 +8,9 @@ export async function analyzeFood(imageBase64: string, description?: string): Pr
   try {
     const prompt = `Analyze this food image and estimate its nutritional information.
 ${description ? `The user describes it as: ${description}` : ""}
-Provide your best estimate of the calories, fat (in grams), and carbohydrates (in grams).
-Respond with a JSON object containing only these three numeric values: { "calories": number, "fat": number, "carbs": number }`;
+Identify the food item and provide your best estimate of the calories, fat (in grams), and carbohydrates (in grams).
+Respond with a JSON object in this format: { "calories": number, "fat": number, "carbs": number, "foodName": string }
+The foodName should be specific (e.g., "Grilled Chicken Salad" instead of just "Salad").`;
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
@@ -37,7 +38,8 @@ Respond with a JSON object containing only these three numeric values: { "calori
     return {
       calories: Math.round(Number(result.calories) || 0),
       fat: Math.round(Number(result.fat) || 0),
-      carbs: Math.round(Number(result.carbs) || 0)
+      carbs: Math.round(Number(result.carbs) || 0),
+      foodName: result.foodName
     };
   } catch (error) {
     console.error("Error analyzing food image:", error);

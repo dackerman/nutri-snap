@@ -6,7 +6,7 @@ interface MealCardProps {
 }
 
 export default function MealCard({ meal }: MealCardProps) {
-  const { mealType, description, imageUrl, calories, fat, carbs, timestamp } = meal;
+  const { mealType, foodName, description, imageUrl, calories, fat, carbs, timestamp } = meal;
   
   // Format time
   const timeString = formatTimeFromDate(new Date(timestamp));
@@ -20,6 +20,9 @@ export default function MealCard({ meal }: MealCardProps) {
         <div className="flex justify-between items-start">
           <div>
             <h3 className="font-medium text-gray-800">{formattedMealType}</h3>
+            {foodName && (
+              <p className="text-sm font-medium text-gray-700">{foodName}</p>
+            )}
             <p className="text-sm text-gray-500">{timeString}</p>
           </div>
           <div className="text-right">
