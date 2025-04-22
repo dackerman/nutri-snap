@@ -6,6 +6,8 @@ import {
   type Meal, 
   type InsertMeal 
 } from "@shared/schema";
+import { db } from "./db";
+import { eq, and, gte, lte } from "drizzle-orm";
 
 export interface IStorage {
   // User methods from original file
@@ -21,38 +23,25 @@ export interface IStorage {
   deleteMeal(id: number): Promise<boolean>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private meals: Map<number, Meal>;
-  private userCurrentId: number;
-  private mealCurrentId: number;
-
-  constructor() {
-    this.users = new Map();
-    this.meals = new Map();
-    this.userCurrentId = 1;
-    this.mealCurrentId = 1;
-  }
-
-  // User methods from original file
+export class DatabaseStorage implements IStorage {
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.userCurrentId++;
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
     return user;
   }
 
-  // Meal methods
   async getMealsByDate(date: Date): Promise<Meal[]> {
     const startOfDay = new Date(date);
     startOfDay.setHours(0, 0, 0, 0);
@@ -60,47 +49,52 @@ export class MemStorage implements IStorage {
     const endOfDay = new Date(date);
     endOfDay.setHours(23, 59, 59, 999);
     
-    return Array.from(this.meals.values()).filter(meal => {
-      const mealDate = new Date(meal.timestamp);
-      return mealDate >= startOfDay && mealDate <= endOfDay;
-    });
+    return await db
+      .select()
+      .from(meals)
+      .where(
+        and(
+          gte(meals.timestamp, startOfDay),
+          lte(meals.timestamp, endOfDay)
+        )
+      );
   }
 
   async getMealById(id: number): Promise<Meal | undefined> {
-    return this.meals.get(id);
+    const [meal] = await db
+      .select()
+      .from(meals)
+      .where(eq(meals.id, id));
+    return meal || undefined;
   }
 
   async createMeal(insertMeal: InsertMeal): Promise<Meal> {
-    const id = this.mealCurrentId++;
-    const meal: Meal = { 
-      ...insertMeal,
-      id, 
-      timestamp: new Date()
-    };
-    
-    this.meals.set(id, meal);
+    const [meal] = await db
+      .insert(meals)
+      .values({
+        ...insertMeal,
+        timestamp: new Date()
+      })
+      .returning();
     return meal;
   }
 
   async updateMeal(id: number, updateData: Partial<InsertMeal>): Promise<Meal | undefined> {
-    const existingMeal = this.meals.get(id);
-    
-    if (!existingMeal) {
-      return undefined;
-    }
-    
-    const updatedMeal: Meal = {
-      ...existingMeal,
-      ...updateData
-    };
-    
-    this.meals.set(id, updatedMeal);
-    return updatedMeal;
+    const [updatedMeal] = await db
+      .update(meals)
+      .set(updateData)
+      .where(eq(meals.id, id))
+      .returning();
+    return updatedMeal || undefined;
   }
 
   async deleteMeal(id: number): Promise<boolean> {
-    return this.meals.delete(id);
+    const result = await db
+      .delete(meals)
+      .where(eq(meals.id, id))
+      .returning();
+    return result.length > 0;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
