@@ -28,6 +28,7 @@ import {
 import { mealTypeOptions } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 
 // Form schema
 const formSchema = z.object({
@@ -41,6 +42,7 @@ type FormValues = z.infer<typeof formSchema>;
 export default function AddMeal() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [isUploading, setIsUploading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
@@ -114,7 +116,14 @@ export default function AddMeal() {
     <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex flex-col">
       <div className="bg-white rounded-t-xl w-full max-h-[90vh] overflow-y-auto mt-auto">
         <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-3 flex justify-between items-center">
-          <h2 className="text-lg font-semibold text-gray-800">Add Meal</h2>
+          <div className="flex items-center">
+            <h2 className="text-lg font-semibold text-gray-800">Add Meal</h2>
+            {user && (
+              <span className="ml-2 text-sm text-gray-500">
+                for {user.username}
+              </span>
+            )}
+          </div>
           <button 
             className="rounded-full w-8 h-8 flex items-center justify-center hover:bg-gray-100"
             onClick={handleClose}

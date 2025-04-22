@@ -63,9 +63,9 @@ export default function Home() {
           </div>
         ) : (
           <DailySummary
-            calories={summary?.calories || 0}
-            fat={summary?.fat || 0}
-            carbs={summary?.carbs || 0}
+            calories={summary?.calories ?? 0}
+            fat={summary?.fat ?? 0}
+            carbs={summary?.carbs ?? 0}
           />
         )}
 
@@ -82,9 +82,9 @@ export default function Home() {
                 <Skeleton key={i} className="h-32 w-full rounded-xl" />
               ))}
             </div>
-          ) : meals && meals.length > 0 ? (
+          ) : meals?.length && meals.length > 0 ? (
             <div className="space-y-4">
-              {meals.map((meal: Meal) => (
+              {meals.map((meal) => (
                 <MealCard key={meal.id} meal={meal} />
               ))}
             </div>
