@@ -8,6 +8,7 @@ import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
 import { FileInput } from "@/components/ui/file-input";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -33,6 +34,7 @@ import { useAuth } from "@/hooks/use-auth";
 // Form schema
 const formSchema = z.object({
   mealType: z.string().min(1, "Meal type is required"),
+  foodName: z.string().min(2, "Food name is required"),
   description: z.string().optional(),
   image: z.instanceof(File, { message: "Food image is required" }),
 });
@@ -51,6 +53,7 @@ export default function AddMeal() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       mealType: "breakfast",
+      foodName: "",
       description: "",
     },
   });
@@ -62,6 +65,7 @@ export default function AddMeal() {
       
       const formData = new FormData();
       formData.append("mealType", values.mealType);
+      formData.append("foodName", values.foodName);
       if (values.description) {
         formData.append("description", values.description);
       }
@@ -120,7 +124,7 @@ export default function AddMeal() {
             <h2 className="text-lg font-semibold text-gray-800">Add Meal</h2>
             {user && (
               <span className="ml-2 text-sm text-gray-500">
-                for {user.username}
+                for {user.name || user.email}
               </span>
             )}
           </div>
@@ -178,6 +182,23 @@ export default function AddMeal() {
                         ))}
                       </SelectContent>
                     </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="foodName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Food Name</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Enter the name of the food"
+                        {...field}
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

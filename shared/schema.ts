@@ -24,7 +24,8 @@ export const meals = pgTable("meals", {
   id: serial("id").primaryKey(),
   userId: integer("user_id"),
   mealType: text("meal_type").notNull(), // breakfast, lunch, dinner, snack
-  description: text("description"),
+  foodName: text("food_name"), // The name of the food
+  description: text("description"), // More detailed description
   imageUrl: text("image_url"),
   calories: integer("calories"),
   fat: integer("fat"), // in grams
