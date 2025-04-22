@@ -106,9 +106,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const meal = await storage.createMeal(mealData);
       
       res.status(201).json(meal);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating meal:", error);
-      res.status(500).json({ message: `Failed to create meal: ${error.message}` });
+      res.status(500).json({ message: `Failed to create meal: ${error.message || 'Unknown error'}` });
     }
   });
 

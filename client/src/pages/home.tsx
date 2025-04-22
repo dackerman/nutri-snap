@@ -9,19 +9,21 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { PlusIcon } from "lucide-react";
 import type { Meal } from "@shared/schema";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function Home() {
   const [, setLocation] = useLocation();
+  const { user } = useAuth();
   const today = new Date();
   const dateString = today.toISOString().split('T')[0];
 
   // Fetch today's meals
-  const { data: meals, isLoading: mealsLoading } = useQuery({
+  const { data: meals, isLoading: mealsLoading } = useQuery<Meal[]>({
     queryKey: ['/api/meals', dateString],
   });
 
   // Fetch nutritional summary
-  const { data: summary, isLoading: summaryLoading } = useQuery({
+  const { data: summary, isLoading: summaryLoading } = useQuery<{calories: number, fat: number, carbs: number}>({
     queryKey: ['/api/summary', dateString],
   });
 
@@ -38,9 +40,14 @@ export default function Home() {
             <span className="material-icons text-primary mr-2">eco</span>
             <h1 className="text-xl font-semibold text-primary-dark">NutriSnap</h1>
           </div>
-          <div>
+          <div className="flex items-center gap-2">
+            {user && (
+              <div className="text-sm font-medium text-gray-700 mr-2">
+                Hi, {user.username}
+              </div>
+            )}
             <button className="rounded-full w-8 h-8 flex items-center justify-center hover:bg-gray-100">
-              <span className="material-icons text-gray-600">settings</span>
+              <span className="material-icons text-gray-600">person</span>
             </button>
           </div>
         </div>

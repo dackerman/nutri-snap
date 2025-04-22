@@ -112,12 +112,12 @@ export function setupAuth(app: Express) {
 
   // API endpoint for login
   app.post("/api/login", (req, res, next) => {
-    passport.authenticate("local", (err, user, info) => {
+    passport.authenticate("local", (err: any, user: Express.User | false, info: any) => {
       if (err) return next(err);
       if (!user) {
         return res.status(401).json({ message: "Invalid username or password" });
       }
-      req.login(user, (err) => {
+      req.login(user, (err: any) => {
         if (err) return next(err);
         // Remove password from response
         const { password, ...userWithoutPassword } = user;
@@ -128,7 +128,7 @@ export function setupAuth(app: Express) {
 
   // API endpoint for logout
   app.post("/api/logout", (req, res, next) => {
-    req.logout((err) => {
+    req.logout((err: any) => {
       if (err) return next(err);
       res.sendStatus(200);
     });
