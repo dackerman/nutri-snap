@@ -42,22 +42,27 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async getMealsByDate(date: Date): Promise<Meal[]> {
+  async getMealsByDate(date: Date, userId?: number): Promise<Meal[]> {
     const startOfDay = new Date(date);
     startOfDay.setHours(0, 0, 0, 0);
     
     const endOfDay = new Date(date);
     endOfDay.setHours(23, 59, 59, 999);
     
+    let conditions = [
+      gte(meals.timestamp, startOfDay),
+      lte(meals.timestamp, endOfDay)
+    ];
+    
+    // If userId is provided, add it to the conditions
+    if (userId !== undefined) {
+      conditions.push(eq(meals.userId, userId));
+    }
+    
     return await db
       .select()
       .from(meals)
-      .where(
-        and(
-          gte(meals.timestamp, startOfDay),
-          lte(meals.timestamp, endOfDay)
-        )
-      );
+      .where(and(...conditions));
   }
 
   async getMealById(id: number): Promise<Meal | undefined> {

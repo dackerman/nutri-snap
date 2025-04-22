@@ -5,7 +5,7 @@ import { analyzeFood } from "./openai";
 import multer from "multer";
 import { insertMealSchema } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
-import fs from "fs";
+import { setupAuth } from "./auth";
 
 // Setup multer for memory storage (we'll process the image and won't store it on disk)
 const upload = multer({ 
@@ -16,6 +16,8 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Setup authentication
+  setupAuth(app);
   // API endpoint to get meals for a specific date
   app.get("/api/meals", async (req: Request, res: Response) => {
     try {
@@ -26,7 +28,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid date format. Use ISO format (YYYY-MM-DD)" });
       }
       
-      const meals = await storage.getMealsByDate(date);
+      // If user is logged in, filter by userId
+      const userId = req.isAuthenticated() ? req.user?.id : undefined;
+      const meals = await storage.getMealsByDate(date, userId);
       res.json(meals);
     } catch (error) {
       console.error("Error fetching meals:", error);
@@ -59,13 +63,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // API endpoint to create a new meal with image analysis
   app.post("/api/meals", upload.single('image'), async (req: Request, res: Response) => {
     try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "You must be logged in to add meals" });
+      }
+      
       if (!req.file) {
         return res.status(400).json({ message: "Food image is required" });
       }
 
       // Get the meal data from the request
       const mealData = {
-        userId: req.body.userId ? parseInt(req.body.userId) : null,
+        userId: req.user?.id,
         mealType: req.body.mealType,
         description: req.body.description || "",
         imageUrl: "", // Will be populated with base64 string
@@ -159,7 +167,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid date format. Use ISO format (YYYY-MM-DD)" });
       }
       
-      const meals = await storage.getMealsByDate(date);
+      // Filter by logged in user if authenticated
+      const userId = req.isAuthenticated() ? req.user?.id : undefined;
+      const meals = await storage.getMealsByDate(date, userId);
       
       const summary = meals.reduce((acc, meal) => {
         acc.calories += meal.calories || 0;
