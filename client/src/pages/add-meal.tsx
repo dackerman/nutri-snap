@@ -34,7 +34,7 @@ import { useAuth } from "@/hooks/use-auth";
 // Form schema
 const formSchema = z.object({
   mealType: z.string().min(1, "Meal type is required"),
-  foodName: z.string().min(2, "Food name is required"),
+  foodName: z.string().optional(), // Optional to allow AI to detect it
   description: z.string().optional(),
   image: z.instanceof(File, { message: "Food image is required" }),
 });
@@ -65,7 +65,10 @@ export default function AddMeal() {
       
       const formData = new FormData();
       formData.append("mealType", values.mealType);
-      formData.append("foodName", values.foodName);
+      // TypeScript narrowing - only append if foodName is a non-empty string
+      if (values.foodName && values.foodName.trim() !== '') {
+        formData.append("foodName", values.foodName);
+      }
       if (values.description) {
         formData.append("description", values.description);
       }
@@ -192,14 +195,15 @@ export default function AddMeal() {
                 name="foodName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Food Name</FormLabel>
+                    <FormLabel>Food Name (optional)</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="Enter the name of the food"
+                        placeholder="Leave empty to let AI detect it automatically"
                         {...field}
                       />
                     </FormControl>
                     <FormMessage />
+                    <p className="text-xs text-gray-500 mt-1">AI will try to identify the food if left blank</p>
                   </FormItem>
                 )}
               />
