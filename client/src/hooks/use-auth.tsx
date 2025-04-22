@@ -17,7 +17,7 @@ type AuthContextType = {
   registerMutation: UseMutationResult<SelectUser, Error, InsertUser>;
 };
 
-type LoginData = Pick<InsertUser, "username" | "password">;
+type LoginData = Pick<InsertUser, "email" | "password">;
 
 export const AuthContext = createContext<AuthContextType | null>(null);
 
@@ -43,13 +43,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       queryClient.invalidateQueries({ queryKey: ["/api/summary"] });
       toast({
         title: "Login successful",
-        description: `Welcome back, ${user.username}!`,
+        description: `Welcome back, ${user.name}!`,
       });
     },
     onError: (error: Error) => {
       toast({
         title: "Login failed",
-        description: "Invalid username or password",
+        description: "Invalid email or password",
         variant: "destructive",
       });
     },
@@ -64,13 +64,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       queryClient.setQueryData(["/api/user"], user);
       toast({
         title: "Registration successful",
-        description: `Welcome, ${user.username}!`,
+        description: `Welcome, ${user.name}!`,
       });
     },
     onError: (error: Error) => {
       toast({
         title: "Registration failed",
-        description: error.message || "Username may already exist",
+        description: error.message || "Email may already be registered",
         variant: "destructive",
       });
     },
