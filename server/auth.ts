@@ -58,9 +58,12 @@ export function setupAuth(app: Express) {
 
   // Configure local strategy for passport
   passport.use(
-    new LocalStrategy(async (username, password, done) => {
+    new LocalStrategy({
+      usernameField: 'email',
+      passwordField: 'password'
+    }, async (email, password, done) => {
       try {
-        const user = await storage.getUserByUsername(username);
+        const user = await storage.getUserByEmail(email);
         if (!user || !(await comparePasswords(password, user.password))) {
           return done(null, false);
         } else {
@@ -88,9 +91,9 @@ export function setupAuth(app: Express) {
   // API endpoint for registration
   app.post("/api/register", async (req, res, next) => {
     try {
-      const existingUser = await storage.getUserByUsername(req.body.username);
+      const existingUser = await storage.getUserByEmail(req.body.email);
       if (existingUser) {
-        return res.status(400).json({ message: "Username already exists" });
+        return res.status(400).json({ message: "Email already registered" });
       }
 
       const user = await storage.createUser({
@@ -115,7 +118,7 @@ export function setupAuth(app: Express) {
     passport.authenticate("local", (err: any, user: Express.User | false, info: any) => {
       if (err) return next(err);
       if (!user) {
-        return res.status(401).json({ message: "Invalid username or password" });
+        return res.status(401).json({ message: "Invalid email or password" });
       }
       req.login(user, (err: any) => {
         if (err) return next(err);

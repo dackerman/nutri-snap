@@ -12,11 +12,11 @@ import { eq, and, gte, lte } from "drizzle-orm";
 export interface IStorage {
   // User methods from original file
   getUser(id: number): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   
   // Meal methods
-  getMealsByDate(date: Date): Promise<Meal[]>;
+  getMealsByDate(date: Date, userId?: number): Promise<Meal[]>;
   getMealById(id: number): Promise<Meal | undefined>;
   createMeal(meal: InsertMeal): Promise<Meal>;
   updateMeal(id: number, meal: Partial<InsertMeal>): Promise<Meal | undefined>;
