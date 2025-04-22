@@ -102,6 +102,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       mealData.calories = analysis.calories;
       mealData.fat = analysis.fat;
       mealData.carbs = analysis.carbs;
+      
+      // If user didn't provide a food name but AI detected one, use the AI's suggestion
+      if (!mealData.foodName && analysis.foodName) {
+        mealData.foodName = analysis.foodName;
+      }
 
       // Create the meal in storage
       const meal = await storage.createMeal(mealData);

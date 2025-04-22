@@ -32,17 +32,18 @@ The foodName should be specific (e.g., "Grilled Chicken Salad" instead of just "
       max_tokens: 500,
     });
 
-    const result = JSON.parse(response.choices[0].message.content) as MealAnalysis;
+    const content = response.choices[0].message.content || '{"calories":0, "fat":0, "carbs":0}';
+    const result = JSON.parse(content) as MealAnalysis;
 
     // Ensure all values are valid numbers and round them to integers
     return {
       calories: Math.round(Number(result.calories) || 0),
       fat: Math.round(Number(result.fat) || 0),
       carbs: Math.round(Number(result.carbs) || 0),
-      foodName: result.foodName
+      foodName: result.foodName || undefined
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error analyzing food image:", error);
-    throw new Error(`Failed to analyze food image: ${error.message}`);
+    throw new Error(`Failed to analyze food image: ${error?.message || 'Unknown error'}`);
   }
 }
