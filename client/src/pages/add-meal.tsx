@@ -32,12 +32,23 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 
 // Form schema
-const formSchema = z.object({
-  mealType: z.string().min(1, "Meal type is required"),
-  foodName: z.string().optional(), // Optional to allow AI to detect it
-  description: z.string().optional(),
-  image: z.instanceof(File, { message: "Food image is required" }),
-});
+const formSchema = z
+  .object({
+    mealType: z.string().min(1, "Meal type is required"),
+    foodName: z.string().optional(), // Optional to allow AI to detect it
+    description: z.string().optional(),
+    image: z.instanceof(File).optional(),
+  })
+  .refine(
+    (data) => {
+      // Either image or description must be provided
+      return !!data.image || (!!data.description && data.description.trim().length > 0);
+    },
+    {
+      message: "Either an image or description must be provided",
+      path: ["image"], // Show error on image field
+    }
+  );
 
 type FormValues = z.infer<typeof formSchema>;
 
@@ -74,7 +85,10 @@ export default function AddMeal() {
       if (values.description) {
         formData.append("description", values.description);
       }
-      formData.append("image", values.image);
+      // Only append image if provided (typecasting to avoid TypeScript errors)
+      if (values.image instanceof File) {
+        formData.append("image", values.image);
+      }
 
       // The fetch call can take time because it's uploading the image
       // Use a timeout to show success quickly if upload takes too long
@@ -181,7 +195,7 @@ export default function AddMeal() {
                 name="image"
                 render={({ field }) => (
                   <FormItem className="mb-5">
-                    <FormLabel>Photo of your meal</FormLabel>
+                    <FormLabel>Photo of your meal (optional if description provided)</FormLabel>
                     <FormControl>
                       <FileInput
                         onFileSelect={(file) => field.onChange(file)}
@@ -246,7 +260,7 @@ export default function AddMeal() {
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Description (optional)</FormLabel>
+                    <FormLabel>Description (required if no image provided)</FormLabel>
                     <FormControl>
                       <Textarea
                         placeholder="Add any details about your meal..."
@@ -261,7 +275,7 @@ export default function AddMeal() {
               />
 
               <div className="py-2 text-center text-sm text-gray-500 italic">
-                We'll analyze your photo to estimate nutrition information
+                We'll analyze your photo or description to estimate nutrition information
               </div>
 
               <Button 
@@ -294,7 +308,7 @@ export default function AddMeal() {
           <div className="bg-white rounded-xl p-6 max-w-sm w-4/5 text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
             <h3 className="text-lg font-medium text-gray-900 mb-1">Adding your meal</h3>
-            <p className="text-gray-500">Uploading image... AI analysis will continue in the background.</p>
+            <p className="text-gray-500">Adding meal data... AI analysis will continue in the background.</p>
           </div>
         </div>
       )}
