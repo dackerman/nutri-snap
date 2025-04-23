@@ -26,7 +26,7 @@ export const meals = pgTable("meals", {
   mealType: text("meal_type").notNull(), // breakfast, lunch, dinner, snack
   foodName: text("food_name"), // The name of the food
   description: text("description"), // More detailed description
-  imageUrl: text("image_url"),
+  imageUrl: text("image_url"), // Image URL or JSON string containing multiple image URLs
   calories: integer("calories"),
   fat: integer("fat"), // in grams
   carbs: integer("carbs"), // in grams

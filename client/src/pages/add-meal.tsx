@@ -7,6 +7,7 @@ import { useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
 import { FileInput } from "@/components/ui/file-input";
+import { MultiFileInput } from "@/components/ui/multi-file-input";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,7 +28,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { mealTypeOptions } from "@/lib/utils";
-import { Loader2 } from "lucide-react";
+import { Loader2, Image as ImageIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -37,16 +38,17 @@ const formSchema = z
     mealType: z.string().min(1, "Meal type is required"),
     foodName: z.string().optional(), // Optional to allow AI to detect it
     description: z.string().optional(),
-    image: z.instanceof(File).optional(),
+    images: z.array(z.instanceof(File)).optional(), // Multiple images
   })
   .refine(
     (data) => {
-      // Either image or description must be provided
-      return !!data.image || (!!data.description && data.description.trim().length > 0);
+      // Either at least one image or a description must be provided
+      return (!!data.images && data.images.length > 0) || 
+             (!!data.description && data.description.trim().length > 0);
     },
     {
       message: "Either an image or description must be provided",
-      path: ["image"], // Show error on image field
+      path: ["images"], // Show error on images field
     }
   );
 
@@ -85,9 +87,19 @@ export default function AddMeal() {
       if (values.description) {
         formData.append("description", values.description);
       }
-      // Only append image if provided (typecasting to avoid TypeScript errors)
-      if (values.image instanceof File) {
-        formData.append("image", values.image);
+      // Append multiple images if provided
+      if (values.images && values.images.length > 0) {
+        // Store first image as main image
+        formData.append("image", values.images[0]);
+        
+        // Append additional images if there are more than one
+        if (values.images.length > 1) {
+          // Save additional images as a JSON string in the imageUrl field
+          // We'll handle this on the server side
+          for (let i = 1; i < values.images.length; i++) {
+            formData.append(`additionalImage${i}`, values.images[i]);
+          }
+        }
       }
 
       // The fetch call can take time because it's uploading the image
@@ -192,16 +204,17 @@ export default function AddMeal() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
-                name="image"
+                name="images"
                 render={({ field }) => (
                   <FormItem className="mb-5">
-                    <FormLabel>Photo of your meal (optional if description provided)</FormLabel>
+                    <FormLabel>Photos of your meal (optional if description provided)</FormLabel>
                     <FormControl>
-                      <FileInput
-                        onFileSelect={(file) => field.onChange(file)}
+                      <MultiFileInput
+                        onFilesSelect={(files) => field.onChange(files)}
+                        maxFiles={5}
                         label=""
-                        hasError={!!form.formState.errors.image}
-                        errorMessage={form.formState.errors.image?.message as string}
+                        hasError={!!form.formState.errors.images}
+                        errorMessage={form.formState.errors.images?.message as string}
                       />
                     </FormControl>
                     <FormMessage />

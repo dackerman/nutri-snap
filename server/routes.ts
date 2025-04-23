@@ -15,6 +15,16 @@ const upload = multer({
   }
 });
 
+// Helper function to check if a string is a JSON array
+function isJsonArray(str: string): boolean {
+  try {
+    const parsed = JSON.parse(str);
+    return Array.isArray(parsed);
+  } catch (e) {
+    return false;
+  }
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
   setupAuth(app);
