@@ -67,8 +67,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "You must be logged in to add meals" });
       }
       
-      if (!req.file) {
-        return res.status(400).json({ message: "Food image is required" });
+      // Check if either image or description is provided
+      if (!req.file && (!req.body.description || req.body.description.trim() === '')) {
+        return res.status(400).json({ message: "Either a food image or description is required" });
       }
 
       // Get the meal data from the request
@@ -77,7 +78,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         mealType: req.body.mealType,
         foodName: req.body.foodName || "",
         description: req.body.description || "",
-        imageUrl: "", // Will be populated with base64 string
+        imageUrl: "", // Will be populated with base64 string if image is provided
         calories: 0, // Placeholder until AI analysis completes
         fat: 0,     // Placeholder until AI analysis completes
         carbs: 0,    // Placeholder until AI analysis completes
@@ -92,9 +93,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: errorMessage });
       }
 
-      // Convert the image to base64 for AI analysis
-      const imageBase64 = req.file.buffer.toString('base64');
-      mealData.imageUrl = `data:${req.file.mimetype};base64,${imageBase64}`;
+      // Process image if available
+      let imageBase64 = "";
+      if (req.file) {
+        imageBase64 = req.file.buffer.toString('base64');
+        mealData.imageUrl = `data:${req.file.mimetype};base64,${imageBase64}`;
+      }
 
       // Create the meal in storage immediately with placeholder values
       const meal = await storage.createMeal(mealData);
