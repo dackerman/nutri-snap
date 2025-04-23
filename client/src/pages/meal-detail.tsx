@@ -255,6 +255,12 @@ export default function MealDetail() {
             {meal.foodName && (
               <h2 className="text-2xl font-semibold text-gray-800 mb-1">{meal.foodName}</h2>
             )}
+            {meal.brandName && (
+              <div className="text-base text-gray-600 mb-1">Brand: {meal.brandName}</div>
+            )}
+            {meal.quantity && meal.unit && (
+              <div className="text-sm text-gray-600 mb-2">Serving size: {meal.quantity} {meal.unit}</div>
+            )}
             <div className="flex items-center text-gray-500 mb-2">
               <span className="material-icons text-sm mr-1">schedule</span>
               <span className="text-sm">{timeString} · {dateString}</span>
@@ -264,7 +270,7 @@ export default function MealDetail() {
           {/* Nutritional Info */}
           <div className="bg-gray-50 rounded-lg p-4 mb-4">
             <h3 className="text-lg font-medium text-gray-800 mb-3">Nutritional Information</h3>
-            <div className="grid grid-cols-3 gap-4 text-center">
+            <div className="grid grid-cols-4 gap-3 text-center">
               <div className="bg-white rounded-lg p-3">
                 <div className="text-lg font-semibold text-gray-800">{meal.calories}</div>
                 <div className="text-xs text-gray-500">calories</div>
@@ -276,6 +282,10 @@ export default function MealDetail() {
               <div className="bg-white rounded-lg p-3">
                 <div className="text-lg font-semibold text-gray-800">{meal.carbs}g</div>
                 <div className="text-xs text-gray-500">carbs</div>
+              </div>
+              <div className="bg-white rounded-lg p-3">
+                <div className="text-lg font-semibold text-gray-800">{meal.protein || 0}g</div>
+                <div className="text-xs text-gray-500">protein</div>
               </div>
             </div>
           </div>

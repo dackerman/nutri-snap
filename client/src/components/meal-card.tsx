@@ -2,7 +2,7 @@ import { formatTimeFromDate } from "@/lib/utils";
 import type { Meal } from "@shared/schema";
 import { Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
 
 interface MealCardProps {
@@ -20,6 +20,23 @@ export default function MealCard({ meal, index = 0 }: MealCardProps) {
   
   // Capitalize meal type
   const formattedMealType = mealType.charAt(0).toUpperCase() + mealType.slice(1);
+  
+  // Process image URL
+  const displayImageUrl = useMemo(() => {
+    if (!imageUrl) return "";
+    
+    try {
+      const parsed = JSON.parse(imageUrl);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed[0]; // Return first image if it's an array
+      }
+    } catch {
+      // If parsing fails, it's a single image URL
+      return imageUrl;
+    }
+    
+    return imageUrl;
+  }, [imageUrl]);
 
   // Handle click to navigate to detail view
   const handleClick = () => {
@@ -97,17 +114,17 @@ export default function MealCard({ meal, index = 0 }: MealCardProps) {
       {/* Image and description section with conditional expansion */}
       <motion.div
         className="px-4 pb-4 overflow-hidden"
-        initial={{ height: (imageUrl || description) ? "auto" : 0 }}
+        initial={{ height: (displayImageUrl || description) ? "auto" : 0 }}
         animate={{ 
-          height: (isExpanded || (imageUrl && description)) ? "auto" : 0,
-          opacity: (isExpanded || (imageUrl && description)) ? 1 : 0
+          height: (isExpanded || (displayImageUrl && description)) ? "auto" : 0,
+          opacity: (isExpanded || (displayImageUrl && description)) ? 1 : 0
         }}
         transition={{ duration: 0.3 }}
       >
         <div className="flex items-center gap-2">
-          {imageUrl && (
+          {displayImageUrl && (
             <img 
-              src={imageUrl} 
+              src={displayImageUrl} 
               alt={description || "Food image"} 
               className="rounded-lg h-16 w-16 object-cover"
             />
