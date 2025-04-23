@@ -11,7 +11,7 @@ interface MealCardProps {
 }
 
 export default function MealCard({ meal, index = 0 }: MealCardProps) {
-  const { id, mealType, foodName, description, imageUrl, calories, fat, carbs, timestamp, analysisPending } = meal;
+  const { id, mealType, foodName, brandName, description, imageUrl, calories, fat, carbs, protein, quantity, unit, timestamp, analysisPending } = meal;
   const [isExpanded, setIsExpanded] = useState(false);
   const [, setLocation] = useLocation();
   
@@ -48,7 +48,15 @@ export default function MealCard({ meal, index = 0 }: MealCardProps) {
           <div>
             <h3 className="font-medium text-gray-800">{formattedMealType}</h3>
             {foodName ? (
-              <p className="text-sm font-medium text-gray-700">{foodName}</p>
+              <div>
+                <p className="text-sm font-medium text-gray-700">{foodName}</p>
+                {brandName && (
+                  <p className="text-xs text-gray-500">Brand: {brandName}</p>
+                )}
+                {quantity && unit && (
+                  <p className="text-xs text-gray-500">Serving: {quantity} {unit}</p>
+                )}
+              </div>
             ) : analysisPending ? (
               <motion.p 
                 className="text-sm font-medium text-gray-500 italic"
@@ -77,7 +85,9 @@ export default function MealCard({ meal, index = 0 }: MealCardProps) {
             ) : (
               <>
                 <div className="font-semibold text-gray-800">{calories} kcal</div>
-                <div className="text-xs text-gray-500">{fat}g fat · {carbs}g carbs</div>
+                <div className="text-xs text-gray-500">
+                  {fat}g fat · {carbs}g carbs · {protein || 0}g protein
+                </div>
               </>
             )}
           </div>

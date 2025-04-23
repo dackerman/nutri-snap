@@ -120,11 +120,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId: req.user?.id,
         mealType: req.body.mealType,
         foodName: req.body.foodName || "",
+        brandName: req.body.brandName || "",
         description: req.body.description || "",
         imageUrl: "", // Will be populated with images
         calories: 0, // Placeholder until AI analysis completes
         fat: 0,     // Placeholder until AI analysis completes
         carbs: 0,    // Placeholder until AI analysis completes
+        protein: 0,  // Placeholder until AI analysis completes
+        quantity: req.body.quantity || null,
+        unit: req.body.unit || null,
         analysisPending: true // New flag to indicate analysis is pending
       };
 
@@ -187,13 +191,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
           calories: analysis.calories,
           fat: analysis.fat,
           carbs: analysis.carbs,
+          protein: analysis.protein || 0,
           analysisPending: false
         };
         
         // If user didn't provide a food name but AI detected one, use the AI's suggestion
         if (!mealData.foodName && analysis.foodName) {
-          // Need to use type assertion for dynamic property
           (updateData as any).foodName = analysis.foodName;
+        }
+        
+        // Add brand name if detected and not provided by user
+        if (!mealData.brandName && analysis.brandName) {
+          (updateData as any).brandName = analysis.brandName;
+        }
+        
+        // Add quantity and unit if detected and not provided by user
+        if (!mealData.quantity && analysis.quantity) {
+          (updateData as any).quantity = analysis.quantity;
+        }
+        
+        if (!mealData.unit && analysis.unit) {
+          (updateData as any).unit = analysis.unit;
         }
 
         // Update the meal with the analysis results
@@ -282,10 +300,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         acc.calories += meal.calories || 0;
         acc.fat += meal.fat || 0;
         acc.carbs += meal.carbs || 0;
+        acc.protein += meal.protein || 0;
         return acc;
-      }, { calories: 0, fat: 0, carbs: 0 });
+      }, { calories: 0, fat: 0, carbs: 0, protein: 0 });
       
-      console.log(`Summary for ${dateStr}: Calories: ${summary.calories}, Fat: ${summary.fat}g, Carbs: ${summary.carbs}g`);
+      console.log(`Summary for ${dateStr}: Calories: ${summary.calories}, Fat: ${summary.fat}g, Carbs: ${summary.carbs}g, Protein: ${summary.protein}g`);
       res.json(summary);
     } catch (error) {
       console.error("Error calculating summary:", error);
