@@ -13,8 +13,32 @@ export async function analyzeFood(imageBase64: string, description?: string): Pr
       // We have an image
       const imagePrompt = `Analyze this food image and estimate its nutritional information.
 ${description ? `The user describes it as: ${description}` : ""}
-Identify the food item and provide your best estimate of the calories, fat (in grams), and carbohydrates (in grams).
-Respond with a JSON object in this format: { "calories": number, "fat": number, "carbs": number, "foodName": string }
+
+Identify the food item and provide detailed nutritional information including:
+1. Calories
+2. Fat (in grams)
+3. Carbohydrates (in grams)
+4. Protein (in grams)
+5. Brand name (if it's not a generic food like an apple; otherwise leave it blank)
+6. Estimated quantity and appropriate unit (where units are: grams, ounces, or count)
+
+For the quantity, use:
+- "count" for items that come in discrete units (e.g., "2 count" for 2 cookies)
+- "grams" for items typically measured by weight in metric
+- "ounces" for items typically measured by weight in imperial
+
+Respond with a JSON object in this format: 
+{
+  "calories": number,
+  "fat": number,
+  "carbs": number,
+  "protein": number,
+  "foodName": string,
+  "brandName": string (or empty if generic),
+  "quantity": number,
+  "unit": string (one of: "grams", "ounces", or "count")
+}
+
 The foodName should be specific (e.g., "Grilled Chicken Salad" instead of just "Salad").`;
 
       const imageResponse = await openai.chat.completions.create({
@@ -34,16 +58,40 @@ The foodName should be specific (e.g., "Grilled Chicken Salad" instead of just "
           },
         ],
         response_format: { type: "json_object" },
-        max_tokens: 500,
+        max_tokens: 800,
       });
       
-      content = imageResponse.choices[0].message.content || '{"calories":0, "fat":0, "carbs":0}';
+      content = imageResponse.choices[0].message.content || '{"calories":0, "fat":0, "carbs":0, "protein":0}';
     } else {
       // We only have a text description
       const textPrompt = `Based on this food description, estimate the nutritional information:
 ${description || "Unknown food"}
-Provide your best estimate of the calories, fat (in grams), and carbohydrates (in grams).
-Respond with a JSON object in this format: { "calories": number, "fat": number, "carbs": number, "foodName": string }
+
+Provide detailed nutritional information including:
+1. Calories
+2. Fat (in grams)
+3. Carbohydrates (in grams)
+4. Protein (in grams)
+5. Brand name (if it's not a generic food like an apple; otherwise leave it blank)
+6. Estimated quantity and appropriate unit (where units are: grams, ounces, or count)
+
+For the quantity, use:
+- "count" for items that come in discrete units (e.g., "2 count" for 2 cookies)
+- "grams" for items typically measured by weight in metric
+- "ounces" for items typically measured by weight in imperial
+
+Respond with a JSON object in this format: 
+{
+  "calories": number,
+  "fat": number,
+  "carbs": number,
+  "protein": number,
+  "foodName": string,
+  "brandName": string (or empty if generic),
+  "quantity": number,
+  "unit": string (one of: "grams", "ounces", or "count")
+}
+
 The foodName should be specific (e.g., "Grilled Chicken Salad" instead of just "Salad").`;
 
       const textResponse = await openai.chat.completions.create({
@@ -55,10 +103,10 @@ The foodName should be specific (e.g., "Grilled Chicken Salad" instead of just "
           },
         ],
         response_format: { type: "json_object" },
-        max_tokens: 500,
+        max_tokens: 800,
       });
 
-      content = textResponse.choices[0].message.content || '{"calories":0, "fat":0, "carbs":0}';
+      content = textResponse.choices[0].message.content || '{"calories":0, "fat":0, "carbs":0, "protein":0}';
     }
     
     const result = JSON.parse(content) as MealAnalysis;
@@ -68,7 +116,11 @@ The foodName should be specific (e.g., "Grilled Chicken Salad" instead of just "
       calories: Math.round(Number(result.calories) || 0),
       fat: Math.round(Number(result.fat) || 0),
       carbs: Math.round(Number(result.carbs) || 0),
-      foodName: result.foodName || undefined
+      protein: Math.round(Number(result.protein) || 0),
+      foodName: result.foodName || undefined,
+      brandName: result.brandName || undefined,
+      quantity: result.quantity ? Math.round(Number(result.quantity)) : undefined,
+      unit: result.unit || undefined
     };
   } catch (error: any) {
     console.error("Error analyzing food:", error);

@@ -25,11 +25,15 @@ export const meals = pgTable("meals", {
   userId: integer("user_id"),
   mealType: text("meal_type").notNull(), // breakfast, lunch, dinner, snack
   foodName: text("food_name"), // The name of the food
+  brandName: text("brand_name"), // Brand name if it's not a generic food
   description: text("description"), // More detailed description
   imageUrl: text("image_url"), // Image URL or JSON string containing multiple image URLs
   calories: integer("calories"),
   fat: integer("fat"), // in grams
   carbs: integer("carbs"), // in grams
+  protein: integer("protein"), // in grams
+  quantity: integer("quantity"), // The numeric amount
+  unit: text("unit"), // The unit of measurement (grams, ounces, count)
   analysisPending: boolean("analysis_pending").default(false), // Flag to indicate if analysis is in progress
   timestamp: timestamp("timestamp").defaultNow().notNull(),
   // No physical storage of images, we're assuming imageUrl could be a data URI or a reference
@@ -44,7 +48,11 @@ export const mealAnalysisSchema = z.object({
   calories: z.number(),
   fat: z.number(),
   carbs: z.number(),
-  foodName: z.string().optional()
+  protein: z.number(),
+  foodName: z.string().optional(),
+  brandName: z.string().optional(),
+  quantity: z.number().optional(),
+  unit: z.string().optional()
 });
 
 export type InsertMeal = z.infer<typeof insertMealSchema>;
