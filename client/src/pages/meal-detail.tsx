@@ -4,7 +4,7 @@ import { useLocation, Link } from "wouter";
 import { formatTimeFromDate, formatDate } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Trash2 } from "lucide-react";
+import { ArrowLeft, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import type { Meal } from "@shared/schema";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
@@ -15,6 +15,8 @@ export default function MealDetail() {
   const [location] = useLocation();
   const { toast } = useToast();
   const [isDeleting, setIsDeleting] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [images, setImages] = useState<string[]>([]);
   
   // Extract the meal ID from the URL
   const mealId = location.split('/').pop();
@@ -22,8 +24,26 @@ export default function MealDetail() {
   // Fetch meal details
   const { data: meal, isLoading, error } = useQuery<Meal>({
     queryKey: [`/api/meals/${mealId}`],
-    enabled: !!mealId,
+    enabled: !!mealId
   });
+  
+  // Process images when meal data changes
+  useEffect(() => {
+    if (meal?.imageUrl) {
+      try {
+        // Attempt to parse as JSON
+        const parsedImages = JSON.parse(meal.imageUrl);
+        if (Array.isArray(parsedImages)) {
+          setImages(parsedImages);
+          return;
+        }
+      } catch (e) {
+        // Not valid JSON, treat as single image
+      }
+      // If not JSON or parsing failed, treat as a single image
+      setImages([meal.imageUrl]);
+    }
+  }, [meal]);
 
   // Handle going back
   const handleBack = () => {
@@ -156,20 +176,69 @@ export default function MealDetail() {
         </div>
       </div>
 
-      {/* Image */}
-      {meal.imageUrl && (
+      {/* Image Gallery */}
+      {images.length > 0 && (
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
+          className="relative"
         >
-          <div className="w-full aspect-square bg-gray-200">
+          <div className="w-full aspect-square bg-gray-200 relative">
             <img 
-              src={meal.imageUrl} 
+              src={images[currentImageIndex]} 
               alt={meal.foodName || "Food image"} 
               className="w-full h-full object-cover"
             />
+            
+            {/* Image navigation controls - only shown when multiple images */}
+            {images.length > 1 && (
+              <div className="absolute inset-0 flex items-center justify-between px-2">
+                <Button 
+                  variant="secondary"
+                  size="icon"
+                  className="bg-white/80 backdrop-blur-sm rounded-full shadow-md"
+                  onClick={() => setCurrentImageIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1))}
+                >
+                  <ChevronLeft className="h-6 w-6" />
+                </Button>
+                
+                <Button 
+                  variant="secondary"
+                  size="icon"
+                  className="bg-white/80 backdrop-blur-sm rounded-full shadow-md"
+                  onClick={() => setCurrentImageIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1))}
+                >
+                  <ChevronRight className="h-6 w-6" />
+                </Button>
+              </div>
+            )}
           </div>
+          
+          {/* Image counter */}
+          {images.length > 1 && (
+            <div className="absolute bottom-4 left-0 right-0 flex justify-center">
+              <div className="bg-black/50 backdrop-blur-sm text-white px-3 py-1 rounded-full text-sm">
+                {currentImageIndex + 1} / {images.length}
+              </div>
+            </div>
+          )}
+          
+          {/* Thumbnail navigation - only shown when multiple images */}
+          {images.length > 1 && (
+            <div className="flex justify-center mt-2 space-x-2 px-4">
+              {images.map((img, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentImageIndex(index)}
+                  className={`w-2 h-2 rounded-full ${
+                    index === currentImageIndex ? 'bg-primary' : 'bg-gray-300'
+                  }`}
+                  aria-label={`View image ${index + 1}`}
+                />
+              ))}
+            </div>
+          )}
         </motion.div>
       )}
 

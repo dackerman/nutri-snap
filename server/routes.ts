@@ -71,14 +71,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // API endpoint to create a new meal with immediate addition and async AI analysis
-  app.post("/api/meals", upload.single('image'), async (req: Request, res: Response) => {
+  // Setup for multiple file uploads
+  const multiUpload = upload.fields([
+    { name: 'image', maxCount: 1 },
+    { name: 'additionalImage1', maxCount: 1 },
+    { name: 'additionalImage2', maxCount: 1 },
+    { name: 'additionalImage3', maxCount: 1 },
+    { name: 'additionalImage4', maxCount: 1 }
+  ]);
+
+  app.post("/api/meals", multiUpload, async (req: Request, res: Response) => {
     try {
       if (!req.isAuthenticated()) {
         return res.status(401).json({ message: "You must be logged in to add meals" });
       }
       
-      // Check if either image or description is provided
-      if (!req.file && (!req.body.description || req.body.description.trim() === '')) {
+      // Get all uploaded files
+      const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+      const mainImage = files?.image?.[0];
+      const additionalImages = [];
+      
+      // Collect any additional images
+      for (let i = 1; i <= 4; i++) {
+        const additionalImage = files?.[`additionalImage${i}`]?.[0];
+        if (additionalImage) {
+          additionalImages.push(additionalImage);
+        }
+      }
+      
+      // Check if either at least one image or description is provided
+      const hasImages = !!mainImage || additionalImages.length > 0;
+      const hasDescription = !!(req.body.description && req.body.description.trim() !== '');
+      
+      if (!hasImages && !hasDescription) {
         return res.status(400).json({ message: "Either a food image or description is required" });
       }
 
@@ -88,7 +113,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         mealType: req.body.mealType,
         foodName: req.body.foodName || "",
         description: req.body.description || "",
-        imageUrl: "", // Will be populated with base64 string if image is provided
+        imageUrl: "", // Will be populated with images
         calories: 0, // Placeholder until AI analysis completes
         fat: 0,     // Placeholder until AI analysis completes
         carbs: 0,    // Placeholder until AI analysis completes
@@ -103,11 +128,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: errorMessage });
       }
 
-      // Process image if available
-      let imageBase64 = "";
-      if (req.file) {
-        imageBase64 = req.file.buffer.toString('base64');
-        mealData.imageUrl = `data:${req.file.mimetype};base64,${imageBase64}`;
+      // Process images
+      let imageBase64 = ""; // For AI analysis (use main image)
+      
+      if (mainImage) {
+        // If we only have the main image with no additional images
+        if (additionalImages.length === 0) {
+          imageBase64 = mainImage.buffer.toString('base64');
+          mealData.imageUrl = `data:${mainImage.mimetype};base64,${imageBase64}`;
+        } else {
+          // If we have both main and additional images, store as JSON array
+          imageBase64 = mainImage.buffer.toString('base64');
+          const allImages = [
+            `data:${mainImage.mimetype};base64,${imageBase64}`,
+            ...additionalImages.map(img => 
+              `data:${img.mimetype};base64,${img.buffer.toString('base64')}`
+            )
+          ];
+          mealData.imageUrl = JSON.stringify(allImages);
+        }
+      } else if (additionalImages.length > 0) {
+        // If we only have additional images with no main image
+        const firstImage = additionalImages[0];
+        imageBase64 = firstImage.buffer.toString('base64');
+        
+        if (additionalImages.length === 1) {
+          // Just one additional image
+          mealData.imageUrl = `data:${firstImage.mimetype};base64,${imageBase64}`;
+        } else {
+          // Multiple additional images
+          const allImages = additionalImages.map(img => 
+            `data:${img.mimetype};base64,${img.buffer.toString('base64')}`
+          );
+          mealData.imageUrl = JSON.stringify(allImages);
+        }
       }
 
       // Create the meal in storage immediately with placeholder values
