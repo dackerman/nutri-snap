@@ -6,6 +6,12 @@ import multer from "multer";
 import { insertMealSchema, type Meal } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
 import { setupAuth } from "./auth";
+import { WebSocketServer, WebSocket } from "ws";
+
+// Add global type declaration for our broadcast function
+declare global {
+  var broadcastMealUpdate: (mealId: number) => void;
+}
 
 // Setup multer for memory storage (we'll process the image and won't store it on disk)
 const upload = multer({ 
@@ -217,6 +223,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Update the meal with the analysis results
         await storage.updateMeal(meal.id, updateData);
         console.log(`Successfully updated meal ${meal.id} with AI analysis`);
+        
+        // Broadcast update to all connected clients
+        if (global.broadcastMealUpdate) {
+          global.broadcastMealUpdate(meal.id);
+        }
       } catch (analysisError: any) {
         console.error(`Error analyzing meal ${meal.id}:`, analysisError);
         // Mark the meal as no longer pending, but with analysis failed
@@ -313,5 +324,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   const httpServer = createServer(app);
+  
+  // Set up WebSocket server
+  const wss = new WebSocketServer({ 
+    server: httpServer, 
+    path: '/ws' 
+  });
+  
+  // Store active connections
+  const connections: WebSocket[] = [];
+  
+  wss.on('connection', (ws) => {
+    console.log('WebSocket client connected');
+    
+    // Store the connection
+    connections.push(ws);
+    
+    // Remove connection when closed
+    ws.on('close', () => {
+      const index = connections.indexOf(ws);
+      if (index !== -1) {
+        connections.splice(index, 1);
+      }
+      console.log('WebSocket client disconnected');
+    });
+  });
+  
+  // Add broadcast function to send messages to all connected clients
+  global.broadcastMealUpdate = (mealId: number) => {
+    const message = JSON.stringify({
+      type: 'meal_updated',
+      mealId
+    });
+    
+    connections.forEach(client => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(message);
+      }
+    });
+  };
+  
   return httpServer;
 }
