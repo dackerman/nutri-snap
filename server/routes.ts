@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { analyzeFood } from "./openai";
 import multer from "multer";
-import { insertMealSchema } from "@shared/schema";
+import { insertMealSchema, type Meal } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
 import { setupAuth } from "./auth";
 
@@ -60,7 +60,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // API endpoint to create a new meal with image analysis
+  // API endpoint to create a new meal with immediate addition and async AI analysis
   app.post("/api/meals", upload.single('image'), async (req: Request, res: Response) => {
     try {
       if (!req.isAuthenticated()) {
@@ -78,9 +78,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         foodName: req.body.foodName || "",
         description: req.body.description || "",
         imageUrl: "", // Will be populated with base64 string
-        calories: 0, // Will be populated by AI analysis
-        fat: 0,     // Will be populated by AI analysis
-        carbs: 0     // Will be populated by AI analysis
+        calories: 0, // Placeholder until AI analysis completes
+        fat: 0,     // Placeholder until AI analysis completes
+        carbs: 0,    // Placeholder until AI analysis completes
+        analysisPending: true // New flag to indicate analysis is pending
       };
 
       // Validate the meal data
@@ -95,23 +96,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const imageBase64 = req.file.buffer.toString('base64');
       mealData.imageUrl = `data:${req.file.mimetype};base64,${imageBase64}`;
 
-      // Analyze the food with OpenAI
-      const analysis = await analyzeFood(imageBase64, mealData.description);
-
-      // Update the meal data with the analysis results
-      mealData.calories = analysis.calories;
-      mealData.fat = analysis.fat;
-      mealData.carbs = analysis.carbs;
-      
-      // If user didn't provide a food name but AI detected one, use the AI's suggestion
-      if (!mealData.foodName && analysis.foodName) {
-        mealData.foodName = analysis.foodName;
-      }
-
-      // Create the meal in storage
+      // Create the meal in storage immediately with placeholder values
       const meal = await storage.createMeal(mealData);
       
+      // Respond immediately with the created meal
       res.status(201).json(meal);
+      
+      // Now perform the AI analysis asynchronously (after response is sent)
+      try {
+        const analysis = await analyzeFood(imageBase64, mealData.description);
+        
+        // Prepare update data with analysis results
+        const updateData = {
+          calories: analysis.calories,
+          fat: analysis.fat,
+          carbs: analysis.carbs,
+          analysisPending: false
+        };
+        
+        // If user didn't provide a food name but AI detected one, use the AI's suggestion
+        if (!mealData.foodName && analysis.foodName) {
+          // Need to use type assertion for dynamic property
+          (updateData as any).foodName = analysis.foodName;
+        }
+
+        // Update the meal with the analysis results
+        await storage.updateMeal(meal.id, updateData);
+        console.log(`Successfully updated meal ${meal.id} with AI analysis`);
+      } catch (analysisError: any) {
+        console.error(`Error analyzing meal ${meal.id}:`, analysisError);
+        // Mark the meal as no longer pending, but with analysis failed
+        await storage.updateMeal(meal.id, { 
+          analysisPending: false,
+          // Could add an analysisError field here if desired
+        });
+      }
     } catch (error: any) {
       console.error("Error creating meal:", error);
       res.status(500).json({ message: `Failed to create meal: ${error.message || 'Unknown error'}` });

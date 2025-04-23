@@ -88,16 +88,19 @@ export default function AddMeal() {
       return res.json();
     },
     onSuccess: () => {
+      // No need to wait for AI analysis to complete
+      // Mark as successful immediately and redirect to home page
       setIsUploading(false);
       setIsSuccess(true);
       
-      // Show success message for 2 seconds
+      // Show success message for a short time
       setTimeout(() => {
+        // Invalidate queries to refresh the data
         queryClient.invalidateQueries({ queryKey: ['/api/meals'] });
         queryClient.invalidateQueries({ queryKey: ['/api/summary'] });
         setIsSuccess(false);
         setLocation('/');
-      }, 2000);
+      }, 1000); // Reduced wait time for better UX
     },
     onError: (error) => {
       setIsUploading(false);

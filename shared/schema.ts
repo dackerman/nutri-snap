@@ -30,6 +30,7 @@ export const meals = pgTable("meals", {
   calories: integer("calories"),
   fat: integer("fat"), // in grams
   carbs: integer("carbs"), // in grams
+  analysisPending: boolean("analysis_pending").default(false), // Flag to indicate if analysis is in progress
   timestamp: timestamp("timestamp").defaultNow().notNull(),
   // No physical storage of images, we're assuming imageUrl could be a data URI or a reference
 });
