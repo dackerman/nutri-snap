@@ -3,6 +3,7 @@ import type { Meal } from "@shared/schema";
 import { Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState } from "react";
+import { useLocation } from "wouter";
 
 interface MealCardProps {
   meal: Meal;
@@ -10,14 +11,20 @@ interface MealCardProps {
 }
 
 export default function MealCard({ meal, index = 0 }: MealCardProps) {
-  const { mealType, foodName, description, imageUrl, calories, fat, carbs, timestamp, analysisPending } = meal;
+  const { id, mealType, foodName, description, imageUrl, calories, fat, carbs, timestamp, analysisPending } = meal;
   const [isExpanded, setIsExpanded] = useState(false);
+  const [, setLocation] = useLocation();
   
   // Format time
   const timeString = formatTimeFromDate(new Date(timestamp));
   
   // Capitalize meal type
   const formattedMealType = mealType.charAt(0).toUpperCase() + mealType.slice(1);
+
+  // Handle click to navigate to detail view
+  const handleClick = () => {
+    setLocation(`/meals/${id}`);
+  };
 
   return (
     <motion.div 
@@ -34,7 +41,7 @@ export default function MealCard({ meal, index = 0 }: MealCardProps) {
         transition: { duration: 0.2 }
       }}
       whileTap={{ scale: 0.98 }}
-      onClick={() => setIsExpanded(!isExpanded)}
+      onClick={handleClick}
     >
       <div className="p-4">
         <div className="flex justify-between items-start">
