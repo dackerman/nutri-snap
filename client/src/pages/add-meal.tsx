@@ -61,8 +61,10 @@ export default function AddMeal() {
   // Mutation for creating a meal
   const createMeal = useMutation({
     mutationFn: async (values: FormValues) => {
+      // Set uploading state immediately to show feedback
       setIsUploading(true);
       
+      // Prepare form data - this is fast
       const formData = new FormData();
       formData.append("mealType", values.mealType);
       // TypeScript narrowing - only append if foodName is a non-empty string
@@ -74,33 +76,61 @@ export default function AddMeal() {
       }
       formData.append("image", values.image);
 
-      const res = await fetch("/api/meals", {
-        method: "POST",
-        body: formData,
-        credentials: "include",
-      });
+      // The fetch call can take time because it's uploading the image
+      // Use a timeout to show success quickly if upload takes too long
+      const uploadTimeout = setTimeout(() => {
+        // If it's taking more than 800ms, just assume it'll work and proceed
+        // This significantly improves perceived performance
+        setIsUploading(false);
+        setIsSuccess(true);
+        
+        setTimeout(() => {
+          setIsSuccess(false);
+          setLocation('/');
+        }, 500);
+      }, 800);
 
-      if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(errorText || "Failed to add meal");
+      try {
+        const res = await fetch("/api/meals", {
+          method: "POST",
+          body: formData,
+          credentials: "include",
+        });
+
+        // Clear the timeout since we got a response
+        clearTimeout(uploadTimeout);
+
+        if (!res.ok) {
+          const errorText = await res.text();
+          throw new Error(errorText || "Failed to add meal");
+        }
+
+        return res.json();
+      } catch (error) {
+        // Clear the timeout in case of error
+        clearTimeout(uploadTimeout);
+        throw error;
       }
-
-      return res.json();
     },
     onSuccess: () => {
-      // No need to wait for AI analysis to complete
-      // Mark as successful immediately and redirect to home page
-      setIsUploading(false);
-      setIsSuccess(true);
-      
-      // Show success message for a short time
-      setTimeout(() => {
-        // Invalidate queries to refresh the data
+      // Only run these if the timeout hasn't triggered already
+      if (isUploading) {
+        setIsUploading(false);
+        setIsSuccess(true);
+        
+        // Show success message for a very short time
+        setTimeout(() => {
+          // Invalidate queries to refresh the data
+          queryClient.invalidateQueries({ queryKey: ['/api/meals'] });
+          queryClient.invalidateQueries({ queryKey: ['/api/summary'] });
+          setIsSuccess(false);
+          setLocation('/');
+        }, 500); // Very short wait time for better UX
+      } else {
+        // Just make sure data is refreshed
         queryClient.invalidateQueries({ queryKey: ['/api/meals'] });
         queryClient.invalidateQueries({ queryKey: ['/api/summary'] });
-        setIsSuccess(false);
-        setLocation('/');
-      }, 1000); // Reduced wait time for better UX
+      }
     },
     onError: (error) => {
       setIsUploading(false);
@@ -242,7 +272,7 @@ export default function AddMeal() {
                 {isUploading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Analyzing...
+                    Adding Meal...
                   </>
                 ) : isSuccess ? (
                   <>
@@ -263,8 +293,8 @@ export default function AddMeal() {
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
           <div className="bg-white rounded-xl p-6 max-w-sm w-4/5 text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <h3 className="text-lg font-medium text-gray-900 mb-1">Analyzing your meal</h3>
-            <p className="text-gray-500">Using AI to calculate nutrition information...</p>
+            <h3 className="text-lg font-medium text-gray-900 mb-1">Adding your meal</h3>
+            <p className="text-gray-500">Uploading image... AI analysis will continue in the background.</p>
           </div>
         </div>
       )}
