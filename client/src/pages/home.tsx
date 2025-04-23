@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { PlusIcon } from "lucide-react";
 import type { Meal } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
+import { motion } from "framer-motion";
 
 export default function Home() {
   const [, setLocation] = useLocation();
@@ -43,7 +44,7 @@ export default function Home() {
           <div className="flex items-center gap-2">
             {user && (
               <div className="text-sm font-medium text-gray-700 mr-2">
-                Hi, {user.username}
+                Hi, {user.name || user.email.split('@')[0]}
               </div>
             )}
             <button className="rounded-full w-8 h-8 flex items-center justify-center hover:bg-gray-100">
@@ -84,8 +85,8 @@ export default function Home() {
             </div>
           ) : meals?.length && meals.length > 0 ? (
             <div className="space-y-4">
-              {meals.map((meal) => (
-                <MealCard key={meal.id} meal={meal} />
+              {meals.map((meal, index) => (
+                <MealCard key={meal.id} meal={meal} index={index} />
               ))}
             </div>
           ) : (
@@ -103,15 +104,31 @@ export default function Home() {
         </section>
       </main>
 
-      {/* Add Food Button */}
-      <div className="fixed bottom-20 right-4 z-10">
+      {/* Animated Add Food Button */}
+      <motion.div 
+        className="fixed bottom-20 right-4 z-10"
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ 
+          type: "spring", 
+          stiffness: 260, 
+          damping: 20, 
+          delay: 0.3 
+        }}
+        whileHover={{ 
+          scale: 1.1,
+          rotate: 5,
+          transition: { duration: 0.2 }
+        }}
+        whileTap={{ scale: 0.9 }}
+      >
         <button
           onClick={handleAddFood}
           className="bg-primary hover:bg-primary-dark text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg transition-all"
         >
           <PlusIcon />
         </button>
-      </div>
+      </motion.div>
 
       {/* Navigation */}
       <NavBar />
