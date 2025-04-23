@@ -31,8 +31,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // API endpoint to get meals for a specific date
   app.get("/api/meals", async (req: Request, res: Response) => {
     try {
+      // Get date from query parameter or use current date
       const dateStr = req.query.date as string || new Date().toISOString().split('T')[0];
-      const date = new Date(dateStr);
+      
+      // Create date at UTC midnight to handle timezone issues properly
+      const date = new Date(dateStr + 'T00:00:00Z');
+      
+      // Add logging to help with debugging
+      console.log(`Fetching meals for date: ${dateStr}, parsed as: ${date.toISOString()}`);
       
       if (isNaN(date.getTime())) {
         return res.status(400).json({ message: "Invalid date format. Use ISO format (YYYY-MM-DD)" });
@@ -41,6 +47,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // If user is logged in, filter by userId
       const userId = req.isAuthenticated() ? req.user?.id : undefined;
       const meals = await storage.getMealsByDate(date, userId);
+      
+      console.log(`Found ${meals.length} meals for date ${dateStr}`);
       res.json(meals);
     } catch (error) {
       console.error("Error fetching meals:", error);
@@ -253,8 +261,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // API endpoint to calculate daily summary
   app.get("/api/summary", async (req: Request, res: Response) => {
     try {
+      // Get date from query parameter or use current date
       const dateStr = req.query.date as string || new Date().toISOString().split('T')[0];
-      const date = new Date(dateStr);
+      
+      // Create date at UTC midnight to handle timezone issues properly
+      const date = new Date(dateStr + 'T00:00:00Z');
+      
+      // Add logging to help with debugging
+      console.log(`Calculating summary for date: ${dateStr}, parsed as: ${date.toISOString()}`);
       
       if (isNaN(date.getTime())) {
         return res.status(400).json({ message: "Invalid date format. Use ISO format (YYYY-MM-DD)" });
@@ -271,6 +285,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return acc;
       }, { calories: 0, fat: 0, carbs: 0 });
       
+      console.log(`Summary for ${dateStr}: Calories: ${summary.calories}, Fat: ${summary.fat}g, Carbs: ${summary.carbs}g`);
       res.json(summary);
     } catch (error) {
       console.error("Error calculating summary:", error);

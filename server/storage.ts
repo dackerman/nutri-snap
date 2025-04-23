@@ -43,11 +43,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getMealsByDate(date: Date, userId?: number): Promise<Meal[]> {
-    const startOfDay = new Date(date);
-    startOfDay.setHours(0, 0, 0, 0);
+    console.log(`In storage.getMealsByDate with date: ${date.toISOString()}`);
     
-    const endOfDay = new Date(date);
-    endOfDay.setHours(23, 59, 59, 999);
+    // Create date range for the given day in UTC
+    // This ensures we're working with the same date regardless of local timezone
+    const startOfDay = new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+    const endOfDay = new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + 1);
+    
+    // Debug logs
+    console.log(`Date range: ${startOfDay.toISOString()} - ${endOfDay.toISOString()}`);
     
     let conditions = [
       gte(meals.timestamp, startOfDay),
@@ -57,12 +61,16 @@ export class DatabaseStorage implements IStorage {
     // If userId is provided, add it to the conditions
     if (userId !== undefined) {
       conditions.push(eq(meals.userId, userId));
+      console.log(`Filtering by userId: ${userId}`);
     }
     
-    return await db
+    const result = await db
       .select()
       .from(meals)
       .where(and(...conditions));
+      
+    console.log(`Found ${result.length} meals`);
+    return result;
   }
 
   async getMealById(id: number): Promise<Meal | undefined> {
