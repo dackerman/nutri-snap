@@ -1,8 +1,8 @@
 import { formatTimeFromDate } from "@/lib/utils";
 import type { Meal } from "@shared/schema";
-import { Loader2 } from "lucide-react";
-import { motion } from "framer-motion";
-import { useState, useMemo } from "react";
+import { Loader2, Clock, Info, Camera, Zap, Utensils, ArrowRight, ArrowUpRight } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useState, useMemo, useRef } from "react";
 import { useLocation } from "wouter";
 
 interface MealCardProps {
@@ -43,54 +43,198 @@ export default function MealCard({ meal, index = 0 }: MealCardProps) {
     setLocation(`/meals/${id}`);
   };
 
+  // Card animation variants
+  const cardVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: { 
+        duration: 0.3,
+        delay: index * 0.05, // Staggered animation based on index
+        when: "beforeChildren",
+      }
+    },
+    hover: { 
+      y: -5,
+      boxShadow: "0 10px 25px rgba(0, 0, 0, 0.08)",
+      scale: 1.02,
+      transition: { duration: 0.2 }
+    },
+    tap: { scale: 0.98 }
+  };
+
+  // Arrow animation when hovering card
+  const arrowVariants = {
+    hidden: { opacity: 0, x: -5 },
+    visible: { opacity: 0, x: -5 },
+    hover: { 
+      opacity: 1, 
+      x: 0,
+      transition: { duration: 0.2 } 
+    }
+  };
+
+  // Content animation for staggered children
+  const contentVariants = {
+    hidden: { opacity: 0 },
+    visible: { 
+      opacity: 1,
+      transition: { 
+        staggerChildren: 0.1,
+        delayChildren: 0.1
+      }
+    }
+  };
+
+  // Individual item animations
+  const itemVariants = {
+    hidden: { opacity: 0, y: 10 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: { duration: 0.3 }
+    }
+  };
+
+  // Animation reference for when the card is hovered
+  const cardRef = useRef<HTMLDivElement>(null);
+  
   return (
     <motion.div 
-      className="bg-white rounded-xl shadow-sm overflow-hidden"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ 
-        duration: 0.3,
-        delay: index * 0.05 // Staggered animation based on index
-      }}
-      whileHover={{ 
-        y: -5,
-        boxShadow: "0 10px 25px rgba(0, 0, 0, 0.08)",
-        transition: { duration: 0.2 }
-      }}
-      whileTap={{ scale: 0.98 }}
+      className="bg-white rounded-xl shadow-sm overflow-hidden relative"
+      variants={cardVariants}
+      initial="hidden"
+      animate="visible"
+      whileHover="hover"
+      whileTap="tap"
       onClick={handleClick}
+      ref={cardRef}
     >
+      {/* Top highlight border with animation */}
+      <motion.div 
+        className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-primary-dark to-primary"
+        initial={{ scaleX: 0, originX: 0 }}
+        animate={{ scaleX: 1 }}
+        transition={{ 
+          delay: index * 0.05 + 0.2,
+          duration: 0.5,
+          ease: "easeOut"
+        }}
+      />
+
       <div className="p-4">
-        <div className="flex justify-between items-start">
+        <motion.div 
+          className="flex justify-between items-start"
+          variants={contentVariants}
+        >
           <div>
-            <h3 className="font-medium text-gray-800">{formattedMealType}</h3>
-            {foodName ? (
-              <div>
-                <p className="text-sm font-medium text-gray-700">{foodName}</p>
-                {brandName && (
-                  <p className="text-xs text-gray-500">Brand: {brandName}</p>
-                )}
-                {quantity && unit && (
-                  <p className="text-xs text-gray-500">Serving: {quantity} {unit}</p>
-                )}
-              </div>
-            ) : analysisPending ? (
-              <motion.p 
-                className="text-sm font-medium text-gray-500 italic"
-                animate={{ opacity: [0.6, 1, 0.6] }}
-                transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-              >
-                Detecting food name...
-              </motion.p>
-            ) : (
-              <p className="text-sm font-medium text-gray-500 italic">Unidentified food</p>
-            )}
-            <p className="text-sm text-gray-500">{timeString}</p>
+            <motion.div 
+              className="flex items-center"
+              variants={itemVariants}
+            >
+              {mealType === 'breakfast' && (
+                <motion.span className="text-yellow-500 mr-1" whileHover={{ rotate: 360 }} transition={{ duration: 0.5 }}>
+                  <Utensils className="h-4 w-4" />
+                </motion.span>
+              )}
+              {mealType === 'lunch' && (
+                <motion.span className="text-green-500 mr-1" whileHover={{ rotate: 360 }} transition={{ duration: 0.5 }}>
+                  <Utensils className="h-4 w-4" />
+                </motion.span>
+              )}
+              {mealType === 'dinner' && (
+                <motion.span className="text-blue-500 mr-1" whileHover={{ rotate: 360 }} transition={{ duration: 0.5 }}>
+                  <Utensils className="h-4 w-4" />
+                </motion.span>
+              )}
+              {mealType === 'snack' && (
+                <motion.span className="text-purple-500 mr-1" whileHover={{ rotate: 360 }} transition={{ duration: 0.5 }}>
+                  <Utensils className="h-4 w-4" />
+                </motion.span>
+              )}
+              <h3 className="font-medium text-gray-800">{formattedMealType}</h3>
+            </motion.div>
+            
+            <motion.div variants={itemVariants}>
+              {foodName ? (
+                <div>
+                  <motion.p 
+                    className="text-sm font-medium text-gray-700 mt-1"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.3 }}
+                  >
+                    {foodName}
+                  </motion.p>
+                  {brandName && (
+                    <motion.p 
+                      className="text-xs text-gray-500 flex items-center"
+                      initial={{ opacity: 0, x: -5 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.4 }}
+                    >
+                      <span className="material-icons text-xs mr-1">business</span>
+                      Brand: {brandName}
+                    </motion.p>
+                  )}
+                  {quantity && unit && (
+                    <motion.p 
+                      className="text-xs text-gray-500 flex items-center"
+                      initial={{ opacity: 0, x: -5 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.5 }}
+                    >
+                      <span className="material-icons text-xs mr-1">scale</span>
+                      Serving: {quantity} {unit}
+                    </motion.p>
+                  )}
+                </div>
+              ) : analysisPending ? (
+                <div className="flex items-center mt-1">
+                  <motion.div
+                    animate={{ 
+                      rotate: [0, 180, 360],
+                      scale: [1, 1.1, 1],
+                    }}
+                    transition={{ 
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: "linear"
+                    }}
+                    className="mr-1"
+                  >
+                    <Zap className="h-3 w-3 text-yellow-500" />
+                  </motion.div>
+                  <motion.p 
+                    className="text-sm font-medium text-gray-500 italic"
+                    animate={{ opacity: [0.6, 1, 0.6] }}
+                    transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                  >
+                    Detecting food name...
+                  </motion.p>
+                </div>
+              ) : (
+                <p className="text-sm font-medium text-gray-500 italic mt-1">Unidentified food</p>
+              )}
+            </motion.div>
+            
+            <motion.p 
+              className="text-xs text-gray-500 flex items-center mt-1"
+              variants={itemVariants}
+            >
+              <Clock className="h-3 w-3 mr-1" />
+              {timeString}
+            </motion.p>
           </div>
-          <div className="text-right">
+          
+          <motion.div 
+            className="text-right"
+            variants={itemVariants}
+          >
             {analysisPending ? (
               <div className="flex items-center justify-end">
-                <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                <Loader2 className="h-4 w-4 animate-spin mr-1 text-primary" />
                 <motion.span 
                   className="text-sm text-gray-500"
                   animate={{ opacity: [0.7, 1, 0.7] }}
@@ -101,62 +245,140 @@ export default function MealCard({ meal, index = 0 }: MealCardProps) {
               </div>
             ) : (
               <>
-                <div className="font-semibold text-gray-800">{calories} kcal</div>
-                <div className="text-xs text-gray-500">
+                <motion.div 
+                  className="font-semibold text-gray-800"
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ 
+                    delay: index * 0.05 + 0.3,
+                    type: "spring", 
+                    stiffness: 300, 
+                    damping: 15 
+                  }}
+                >
+                  {calories} kcal
+                </motion.div>
+                <motion.div 
+                  className="text-xs text-gray-500"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: index * 0.05 + 0.4 }}
+                >
                   {fat}g fat · {carbs}g carbs · {protein || 0}g protein
-                </div>
+                </motion.div>
               </>
             )}
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </div>
 
       {/* Image and description section with conditional expansion */}
-      <motion.div
-        className="px-4 pb-4 overflow-hidden"
-        initial={{ height: (displayImageUrl || description) ? "auto" : 0 }}
-        animate={{ 
-          height: (isExpanded || (displayImageUrl && description)) ? "auto" : 0,
-          opacity: (isExpanded || (displayImageUrl && description)) ? 1 : 0
-        }}
-        transition={{ duration: 0.3 }}
-      >
-        <div className="flex items-center gap-2">
-          {displayImageUrl && (
-            <img 
-              src={displayImageUrl} 
-              alt={description || "Food image"} 
-              className="rounded-lg h-16 w-16 object-cover"
-            />
-          )}
-          {description && (
-            <div className="text-sm text-gray-600">
-              {description}
+      <AnimatePresence>
+        {(displayImageUrl || description) && (
+          <motion.div
+            className="px-4 pb-4 overflow-hidden"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ 
+              height: "auto",
+              opacity: 1
+            }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <div className="flex items-center gap-3">
+              {displayImageUrl && (
+                <motion.div
+                  className="relative overflow-hidden rounded-lg"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.2, duration: 0.3 }}
+                  whileHover={{ scale: 1.05 }}
+                >
+                  <motion.div 
+                    className="absolute inset-0 bg-primary opacity-0"
+                    whileHover={{ opacity: 0.1 }}
+                  />
+                  <img 
+                    src={displayImageUrl} 
+                    alt={description || "Food image"} 
+                    className="h-16 w-16 object-cover"
+                  />
+                </motion.div>
+              )}
+              {description && (
+                <motion.div 
+                  className="text-sm text-gray-600"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                >
+                  {description}
+                </motion.div>
+              )}
             </div>
-          )}
-        </div>
-      </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       
       {/* Animated progress indicator for pending analysis */}
-      {analysisPending && (
-        <div className="px-4 pb-3">
-          <div className="w-full bg-gray-100 h-1 rounded-full overflow-hidden">
+      <AnimatePresence>
+        {analysisPending && (
+          <motion.div 
+            className="px-4 pb-3"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
             <motion.div 
-              className="bg-primary h-1"
-              initial={{ width: 0 }}
-              animate={{ width: "100%" }}
-              transition={{ 
-                duration: 2,
-                repeat: Infinity,
-                ease: "linear" 
-              }}
-            />
-          </div>
-          <p className="text-xs text-gray-500 text-center mt-1">
-            AI is analyzing your meal...
-          </p>
-        </div>
-      )}
+              className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden"
+              initial={{ scaleX: 0 }}
+              animate={{ scaleX: 1 }}
+              transition={{ delay: 0.2, duration: 0.5 }}
+            >
+              <motion.div 
+                className="bg-gradient-to-r from-blue-400 via-primary to-blue-400 h-full"
+                initial={{ x: "-100%" }}
+                animate={{ 
+                  x: ["-100%", "100%"]
+                }}
+                transition={{ 
+                  duration: 1.5,
+                  repeat: Infinity,
+                  ease: "linear" 
+                }}
+              />
+            </motion.div>
+            <motion.div 
+              className="flex items-center justify-center mt-2"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.4 }}
+            >
+              <motion.span
+                animate={{ scale: [1, 1.1, 1] }}
+                transition={{ 
+                  duration: 2,
+                  repeat: Infinity,
+                  repeatType: "reverse"
+                }}
+              >
+                <span className="material-icons text-xs text-primary mr-1">smart_toy</span>
+              </motion.span>
+              <p className="text-xs text-gray-500">
+                AI is analyzing your meal...
+              </p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Clickable indicator */}
+      <motion.div 
+        className="absolute bottom-2 right-2 text-primary"
+        variants={arrowVariants}
+      >
+        <ArrowUpRight className="h-4 w-4" />
+      </motion.div>
     </motion.div>
   );
 }

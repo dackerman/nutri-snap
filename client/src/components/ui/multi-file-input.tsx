@@ -1,6 +1,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { X } from "lucide-react";
+import { X, Camera, Upload, Image as ImageIcon, Plus } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 export interface MultiFileInputProps
   extends React.InputHTMLAttributes<HTMLInputElement> {
@@ -110,60 +111,150 @@ const MultiFileInput = React.forwardRef<HTMLInputElement, MultiFileInputProps>(
         )}
         
         {/* Preview grid for uploaded images */}
-        {previewUrls.length > 0 && (
-          <div className="grid grid-cols-3 gap-2 mb-3">
-            {previewUrls.map((url, index) => (
-              <div key={index} className="relative group">
-                <img
-                  src={url}
-                  alt={`${previewAlt} ${index + 1}`}
-                  className="w-full h-20 object-cover rounded-lg border border-gray-200"
-                />
-                <button
-                  type="button"
-                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removeImage(index);
+        <AnimatePresence>
+          {previewUrls.length > 0 && (
+            <motion.div 
+              className="grid grid-cols-3 gap-2 mb-3"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.3 }}
+            >
+              {previewUrls.map((url, index) => (
+                <motion.div 
+                  key={`${url}-${index}`} 
+                  className="relative group overflow-hidden"
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  transition={{ 
+                    type: "spring",
+                    duration: 0.5,
+                    delay: index * 0.05, 
+                    stiffness: 200, 
+                    damping: 20 
                   }}
+                  whileHover={{ scale: 1.05 }}
+                  layout
                 >
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
+                  <motion.img
+                    src={url}
+                    alt={`${previewAlt} ${index + 1}`}
+                    className="w-full h-20 object-cover rounded-lg border border-gray-200"
+                    initial={{ filter: "blur(10px)" }}
+                    animate={{ filter: "blur(0px)" }}
+                    transition={{ duration: 0.5 }}
+                  />
+                  <motion.div 
+                    className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 rounded-lg"
+                  />
+                  <motion.button
+                    type="button"
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-md"
+                    initial={{ opacity: 0, scale: 0 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    whileHover={{ scale: 1.2 }}
+                    whileTap={{ scale: 0.9 }}
+                    transition={{ delay: index * 0.05 + 0.2 }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeImage(index);
+                    }}
+                  >
+                    <X className="h-3 w-3" />
+                  </motion.button>
+                </motion.div>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
         
         {/* Upload area */}
-        {previewUrls.length < maxFiles && (
-          <div
-            className={cn(
-              "border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors",
-              borderClass,
-              "hover:bg-gray-50"
-            )}
-            onClick={handleClick}
-          >
-            <div className="py-4">
-              <span className="material-icons text-gray-400 text-2xl mb-1">photo_camera</span>
-              <p className="text-gray-500 text-sm">
-                {previewUrls.length === 0 
-                  ? `Tap to upload photos (max ${maxFiles})`
-                  : `Add more photos (${previewUrls.length}/${maxFiles})`
-                }
-              </p>
-            </div>
-            <input
-              type="file"
-              multiple
-              ref={inputRef}
-              className="hidden"
-              onChange={handleChange}
-              accept="image/*"
-              {...props}
-            />
-          </div>
-        )}
+        <AnimatePresence>
+          {previewUrls.length < maxFiles && (
+            <motion.div
+              className={cn(
+                "border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors",
+                borderClass,
+                "hover:bg-gray-50"
+              )}
+              onClick={handleClick}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+              whileHover={{ 
+                scale: 1.02, 
+                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.05)",
+                borderColor: "#60a5fa"
+              }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <motion.div 
+                className="py-4 flex flex-col items-center"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.2 }}
+              >
+                <motion.div
+                  className="relative mb-2"
+                  whileHover={{ rotate: [0, -10, 10, -10, 0] }}
+                  transition={{ duration: 0.5 }}
+                >
+                  <motion.div
+                    className="absolute inset-0 bg-primary rounded-full opacity-10"
+                    animate={{ 
+                      scale: [1, 1.2, 1],
+                      opacity: [0.1, 0.2, 0.1]
+                    }}
+                    transition={{ 
+                      repeat: Infinity,
+                      duration: 2,
+                      ease: "easeInOut"
+                    }}
+                  />
+                  <Camera className="text-primary h-8 w-8" />
+                </motion.div>
+                <motion.p 
+                  className="text-gray-600 text-sm font-medium"
+                  animate={{ 
+                    y: [0, -2, 0],
+                  }}
+                  transition={{ 
+                    repeat: Infinity,
+                    duration: 2,
+                    repeatType: "reverse",
+                    ease: "easeInOut"
+                  }}
+                >
+                  {previewUrls.length === 0 
+                    ? `Tap to upload photos (max ${maxFiles})`
+                    : `Add more photos (${previewUrls.length}/${maxFiles})`
+                  }
+                </motion.p>
+                {previewUrls.length === 0 && (
+                  <motion.div 
+                    className="flex items-center mt-2 text-xs text-gray-400"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.5 }}
+                  >
+                    <ImageIcon className="h-3 w-3 mr-1" />
+                    <span>AI will analyze your photos</span>
+                  </motion.div>
+                )}
+              </motion.div>
+              <input
+                type="file"
+                multiple
+                ref={inputRef}
+                className="hidden"
+                onChange={handleChange}
+                accept="image/*"
+                {...props}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
         
         {hasError && errorMessage && (
           <p className="mt-1 text-sm text-red-500">{errorMessage}</p>
