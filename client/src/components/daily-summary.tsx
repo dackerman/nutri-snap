@@ -4,6 +4,7 @@ interface DailySummaryProps {
   calories: number;
   fat: number;
   carbs: number;
+  protein?: number;
   goal?: number;
 }
 
@@ -11,6 +12,7 @@ export default function DailySummary({
   calories, 
   fat, 
   carbs, 
+  protein = 0,
   goal = 2000 
 }: DailySummaryProps) {
   // Calculate progress percentage
@@ -20,7 +22,7 @@ export default function DailySummary({
     <section className="mb-6">
       <h2 className="text-lg font-semibold text-gray-800 mb-3">Today's Summary</h2>
       <div className="bg-white rounded-xl shadow-sm p-4 mb-5">
-        <div className="grid grid-cols-3 gap-4 mb-4">
+        <div className="grid grid-cols-4 gap-3 mb-4">
           {/* Calories */}
           <div className="text-center">
             <div className="text-2xl font-semibold text-primary-dark">{calories}</div>
@@ -37,6 +39,12 @@ export default function DailySummary({
           <div className="text-center">
             <div className="text-2xl font-semibold text-primary-dark">{carbs}g</div>
             <div className="text-sm text-gray-500">Carbs</div>
+          </div>
+          
+          {/* Protein */}
+          <div className="text-center">
+            <div className="text-2xl font-semibold text-primary-dark">{protein}g</div>
+            <div className="text-sm text-gray-500">Protein</div>
           </div>
         </div>
         

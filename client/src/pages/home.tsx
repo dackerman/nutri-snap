@@ -24,7 +24,7 @@ export default function Home() {
   });
 
   // Fetch nutritional summary
-  const { data: summary, isLoading: summaryLoading } = useQuery<{calories: number, fat: number, carbs: number}>({
+  const { data: summary, isLoading: summaryLoading } = useQuery<{calories: number, fat: number, carbs: number, protein: number}>({
     queryKey: ['/api/summary', dateString],
   });
 
@@ -67,6 +67,7 @@ export default function Home() {
             calories={summary?.calories ?? 0}
             fat={summary?.fat ?? 0}
             carbs={summary?.carbs ?? 0}
+            protein={summary?.protein ?? 0}
           />
         )}
 
