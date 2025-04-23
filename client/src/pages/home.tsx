@@ -21,11 +21,15 @@ export default function Home() {
   // Fetch today's meals
   const { data: meals, isLoading: mealsLoading } = useQuery<Meal[]>({
     queryKey: ['/api/meals', dateString],
+    // Add refetch interval to periodically check for updates
+    refetchInterval: 60000, // Refetch every minute as a fallback
   });
 
   // Fetch nutritional summary
   const { data: summary, isLoading: summaryLoading } = useQuery<{calories: number, fat: number, carbs: number, protein: number}>({
     queryKey: ['/api/summary', dateString],
+    // Also refetch the summary on the same schedule
+    refetchInterval: 60000,
   });
 
   const handleAddFood = () => {

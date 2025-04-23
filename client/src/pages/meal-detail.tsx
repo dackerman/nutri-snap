@@ -24,7 +24,12 @@ export default function MealDetail() {
   // Fetch meal details
   const { data: meal, isLoading, error } = useQuery<Meal>({
     queryKey: [`/api/meals/${mealId}`],
-    enabled: !!mealId
+    enabled: !!mealId,
+    // Add refetch intervals to automatically update the view when analysis completes
+    refetchInterval: (data) => {
+      // If the meal exists and analysis is pending, refetch more frequently
+      return data?.analysisPending ? 5000 : 60000;
+    }
   });
   
   // Process images when meal data changes
