@@ -8,6 +8,7 @@ import Home from "@/pages/home";
 import AddMeal from "@/pages/add-meal";
 import EditMeal from "@/pages/edit-meal";
 import MealDetail from "@/pages/meal-detail";
+import CalendarView from "@/pages/calendar-view";
 import AuthPage from "@/pages/auth-page";
 import { ProtectedRoute } from "./lib/protected-route";
 import { AuthProvider } from "@/hooks/use-auth";

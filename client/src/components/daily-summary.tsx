@@ -1,11 +1,20 @@
 import { calculateCalorieProgress } from "@/lib/utils";
 
-interface DailySummaryProps {
+// Export the interface for use in other components
+export interface DailySummaryProps {
   calories: number;
   fat: number;
   carbs: number;
   protein?: number;
   goal?: number;
+}
+
+// Export summary data type for use in other components
+export interface DailySummary {
+  calories: number;
+  fat: number;
+  carbs: number;
+  protein: number;
 }
 
 export default function DailySummary({ 
