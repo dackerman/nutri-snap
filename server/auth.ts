@@ -87,7 +87,12 @@ export function setupAuth(app: Express) {
   );
   
   // Configure Google OAuth strategy for passport
+  console.log('Google Client ID exists:', !!process.env.GOOGLE_CLIENT_ID);
+  console.log('Google Client Secret exists:', !!process.env.GOOGLE_CLIENT_SECRET);
+  console.log('Environment variables:', Object.keys(process.env).filter(key => key.includes('GOOGLE')));
+  
   if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+    console.log('Setting up Google OAuth strategy');
     // Get the Replit domain from the environment or use localhost for development
     const replit_id = process.env.REPL_ID || '';
     const replit_slug = process.env.REPL_SLUG || 'workspace';
@@ -234,21 +239,33 @@ export function setupAuth(app: Express) {
   });
   
   // Google OAuth routes
-  if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
-    // Route to initiate Google OAuth flow
-    app.get('/api/auth/google', 
-      passport.authenticate('google', { scope: ['profile', 'email'] })
-    );
-    
-    // Google OAuth callback route
-    app.get('/api/auth/google/callback', 
-      passport.authenticate('google', { 
-        failureRedirect: '/auth?error=google-auth-failed' 
-      }),
-      (req, res) => {
-        // Successful authentication
-        res.redirect('/');
-      }
-    );
-  }
+  console.log('Registering Google OAuth routes');
+  
+  // We'll unconditionally register the routes, but the strategy might not be available
+  // Route to initiate Google OAuth flow
+  app.get('/api/auth/google', (req, res, next) => {
+    console.log('Google auth route accessed');
+    if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+      return res.status(503).json({
+        error: 'Google authentication is not configured',
+        message: 'The server administrator needs to set up Google OAuth credentials'
+      });
+    }
+    passport.authenticate('google', { scope: ['profile', 'email'] })(req, res, next);
+  });
+  
+  // Google OAuth callback route
+  app.get('/api/auth/google/callback', (req, res, next) => {
+    console.log('Google auth callback route accessed');
+    if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+      return res.redirect('/auth?error=google-auth-not-configured');
+    }
+    passport.authenticate('google', { 
+      failureRedirect: '/auth?error=google-auth-failed' 
+    })(req, res, next);
+  }, (req, res) => {
+    // Successful authentication
+    console.log('Google authentication successful');
+    res.redirect('/');
+  });
 }
