@@ -1,6 +1,7 @@
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
-import { Express } from "express";
+import { Strategy as GoogleStrategy } from "passport-google-oauth20";
+import { Express, Request } from "express";
 import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
@@ -56,7 +57,7 @@ export function setupAuth(app: Express) {
   app.use(passport.initialize());
   app.use(passport.session());
 
-  // Configure local strategy for passport
+  // Configure local strategy for email/password authentication
   passport.use(
     new LocalStrategy({
       usernameField: 'email',
@@ -64,16 +65,94 @@ export function setupAuth(app: Express) {
     }, async (email, password, done) => {
       try {
         const user = await storage.getUserByEmail(email);
-        if (!user || !(await comparePasswords(password, user.password))) {
+        
+        // Handle cases where user doesn't exist or has no password (Google-only user)
+        if (!user || !user.password) {
           return done(null, false);
-        } else {
-          return done(null, user);
         }
+        
+        // Verify password
+        const isPasswordValid = await comparePasswords(password, user.password);
+        if (!isPasswordValid) {
+          return done(null, false);
+        }
+        
+        // Update last login time
+        await storage.updateUser(user.id, {});
+        return done(null, user);
       } catch (error) {
         return done(error);
       }
     }),
   );
+  
+  // Configure Google OAuth strategy for passport
+  if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+    const callbackURL = process.env.NODE_ENV === 'production'
+      ? 'https://your-replit-domain.replit.app/api/auth/google/callback'
+      : 'http://localhost:5000/api/auth/google/callback';
+      
+    passport.use(
+      new GoogleStrategy(
+        {
+          clientID: process.env.GOOGLE_CLIENT_ID,
+          clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+          callbackURL,
+          scope: ['profile', 'email']
+        },
+        async (accessToken, refreshToken, profile, done) => {
+          try {
+            // Extract profile information
+            const email = profile.emails && profile.emails[0] && profile.emails[0].value;
+            if (!email) {
+              return done(new Error('No email provided from Google'));
+            }
+            
+            // Get profile picture
+            const profilePicture = profile.photos && profile.photos[0] && profile.photos[0].value;
+            
+            // Check if user already exists with this Google ID
+            let user = await storage.getUserByGoogleId(profile.id);
+            
+            // If not found by Google ID, try to find by email (for existing users who want to link Google)
+            if (!user) {
+              user = await storage.getUserByEmail(email);
+              
+              if (user) {
+                // Existing user found by email - link Google account to it
+                user = await storage.updateUser(user.id, {
+                  googleId: profile.id,
+                  profilePicture: profilePicture || user.profilePicture
+                });
+                console.log(`Linked Google account to existing user: ${email}`);
+              } else {
+                // No user found - create a new one
+                user = await storage.createUser({
+                  name: profile.displayName || email.split('@')[0],
+                  email,
+                  googleId: profile.id,
+                  profilePicture
+                });
+                console.log(`Created new user from Google auth: ${email}`);
+              }
+            } else {
+              // Update user profile with latest Google info
+              user = await storage.updateUser(user.id, {
+                profilePicture: profilePicture || user.profilePicture
+              });
+            }
+            
+            return done(null, user);
+          } catch (error) {
+            console.error("Google authentication error:", error);
+            return done(error);
+          }
+        }
+      )
+    );
+  } else {
+    console.warn("Google OAuth not configured - GOOGLE_CLIENT_ID and/or GOOGLE_CLIENT_SECRET missing");
+  }
 
   // Serialize user to session
   passport.serializeUser((user, done) => done(null, user.id));
@@ -146,4 +225,23 @@ export function setupAuth(app: Express) {
     const { password, ...userWithoutPassword } = req.user;
     res.json(userWithoutPassword);
   });
+  
+  // Google OAuth routes
+  if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+    // Route to initiate Google OAuth flow
+    app.get('/api/auth/google', 
+      passport.authenticate('google', { scope: ['profile', 'email'] })
+    );
+    
+    // Google OAuth callback route
+    app.get('/api/auth/google/callback', 
+      passport.authenticate('google', { 
+        failureRedirect: '/auth?error=google-auth-failed' 
+      }),
+      (req, res) => {
+        // Successful authentication
+        res.redirect('/');
+      }
+    );
+  }
 }

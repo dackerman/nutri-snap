@@ -25,6 +25,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Loader2 } from "lucide-react";
+import { GoogleSignInButton } from "@/components/ui/google-signin-button";
+import { Separator } from "@/components/ui/separator";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -142,6 +144,19 @@ export default function AuthPage() {
                       ) : null}
                       Sign In
                     </Button>
+                    
+                    <div className="relative my-4">
+                      <Separator className="my-4" />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="bg-card px-2 text-xs text-muted-foreground">
+                          OR
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <GoogleSignInButton
+                      label={activeTab === "login" ? "Sign in with Google" : "Sign up with Google"}
+                    />
                   </form>
                 </Form>
               </TabsContent>
