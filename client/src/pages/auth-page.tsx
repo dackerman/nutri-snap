@@ -226,6 +226,19 @@ export default function AuthPage() {
                       ) : null}
                       Create Account
                     </Button>
+                    
+                    <div className="relative my-4">
+                      <Separator className="my-4" />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="bg-card px-2 text-xs text-muted-foreground">
+                          OR
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <GoogleSignInButton 
+                      label="Sign up with Google"
+                    />
                   </form>
                 </Form>
               </TabsContent>

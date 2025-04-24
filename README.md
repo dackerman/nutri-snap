@@ -5,7 +5,10 @@ NutriTrack AI is a mobile-first nutrition tracking application that leverages AI
 ## Features
 
 ### Core Functionality
-- **Email-based Authentication**: Secure user accounts with personalized meal tracking
+- **Flexible Authentication**: 
+  - Email/password login for traditional authentication
+  - Google Sign-In for passwordless login
+  - Smart account linking that connects Google accounts to existing email accounts
 - **AI-Powered Food Analysis**: Upload photos or describe your meals to get automatic nutritional estimates
 - **Multiple Images**: Upload multiple images per meal for more accurate analysis
 - **Smart Image Generation**: AI generates food images when no photos are provided
@@ -57,6 +60,8 @@ The application requires these environment variables:
 ```
 DATABASE_URL=postgresql://[user]:[password]@[host]:[port]/[database]
 OPENAI_API_KEY=your_openai_api_key
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
 ```
 
 ### Installation
@@ -68,10 +73,12 @@ OPENAI_API_KEY=your_openai_api_key
 ## API Endpoints
 
 ### Authentication
-- `POST /api/register` - Create a new user account
-- `POST /api/login` - Log in to an existing account
+- `POST /api/register` - Create a new user account with email/password
+- `POST /api/login` - Log in to an existing account with email/password
 - `POST /api/logout` - Log out the current user
 - `GET /api/user` - Get the current user's information
+- `GET /api/auth/google` - Initiate Google OAuth authentication flow
+- `GET /api/auth/google/callback` - Handle Google OAuth callback
 
 ### Meal Management
 - `GET /api/meals` - Get meals for the current day

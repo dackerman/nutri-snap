@@ -88,9 +88,16 @@ export function setupAuth(app: Express) {
   
   // Configure Google OAuth strategy for passport
   if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+    // Get the Replit domain from the environment or use localhost for development
+    const replit_id = process.env.REPL_ID || '';
+    const replit_slug = process.env.REPL_SLUG || 'workspace';
+    const replit_owner = process.env.REPL_OWNER || '';
+    
     const callbackURL = process.env.NODE_ENV === 'production'
-      ? 'https://your-replit-domain.replit.app/api/auth/google/callback'
-      : 'http://localhost:5000/api/auth/google/callback';
+      ? `https://${replit_slug}.${replit_owner}.repl.co/api/auth/google/callback`
+      : replit_id 
+        ? `https://${replit_id}.id.repl.co/api/auth/google/callback`
+        : 'http://localhost:5000/api/auth/google/callback';
       
     passport.use(
       new GoogleStrategy(
