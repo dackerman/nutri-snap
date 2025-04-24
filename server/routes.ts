@@ -40,7 +40,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get date from query parameter or use current date
       const dateStr = req.query.date as string || new Date().toISOString().split('T')[0];
       
-      // Create date at UTC midnight to handle timezone issues properly
+      // Create date object (we'll adjust for Eastern time in the storage layer)
       const date = new Date(dateStr + 'T00:00:00Z');
       
       // Add logging to help with debugging
@@ -320,7 +320,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get date from query parameter or use current date
       const dateStr = req.query.date as string || new Date().toISOString().split('T')[0];
       
-      // Create date at UTC midnight to handle timezone issues properly
+      // Create date object (we'll adjust for Eastern time in the storage layer)
       const date = new Date(dateStr + 'T00:00:00Z');
       
       // Add logging to help with debugging

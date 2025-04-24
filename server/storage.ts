@@ -45,12 +45,29 @@ export class DatabaseStorage implements IStorage {
   async getMealsByDate(date: Date, userId?: number): Promise<Meal[]> {
     console.log(`In storage.getMealsByDate with date: ${date.toISOString()}`);
     
-    // Create date range for the given day in UTC
-    // This ensures we're working with the same date regardless of local timezone
-    const startOfDay = new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
-    const endOfDay = new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + 1);
+    // Set timezone offset for Eastern Time (ET)
+    // ET is UTC-4 during DST (summer) and UTC-5 during standard time (winter)
+    // For 2025-04-24, we're in DST so it's UTC-4
+    const etOffsetHours = -4;
+    
+    // Adjust the date to Eastern Time
+    const etDate = new Date(date);
+    etDate.setHours(etDate.getHours() + etOffsetHours);
+    
+    // Create date range for the given day in Eastern Time
+    const startOfDay = new Date(Date.UTC(
+      etDate.getFullYear(),
+      etDate.getMonth(), 
+      etDate.getDate()
+    ));
+    const endOfDay = new Date(Date.UTC(
+      etDate.getFullYear(),
+      etDate.getMonth(), 
+      etDate.getDate() + 1
+    ));
     
     // Debug logs
+    console.log(`Eastern Time adjusted date: ${etDate.toISOString()}`);
     console.log(`Date range: ${startOfDay.toISOString()} - ${endOfDay.toISOString()}`);
     
     let conditions = [
