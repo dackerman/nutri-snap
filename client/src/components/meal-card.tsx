@@ -1,9 +1,11 @@
 import { formatTimeFromDate } from "@/lib/utils";
 import type { Meal } from "@shared/schema";
-import { Loader2, Clock, Info, Camera, Zap, Utensils, ArrowRight, ArrowUpRight } from "lucide-react";
+import { Loader2, Clock, Info, Camera, Zap, Utensils, ArrowRight, ArrowUpRight, Pencil, Flame, Drumstick } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useMemo, useRef } from "react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
+import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card";
+import { Button } from "@/components/ui/button";
 
 interface MealCardProps {
   meal: Meal;
@@ -372,6 +374,69 @@ export default function MealCard({ meal, index = 0 }: MealCardProps) {
         )}
       </AnimatePresence>
 
+      {/* Nutrition section with edit option */}
+      <div className="px-4 pb-4">
+        {/* Footer with nutrition summary and actions */}
+        <motion.div 
+          className="flex justify-between items-center mt-2 pt-2 border-t border-gray-100"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.7 }}
+        >
+          <div className="flex space-x-2 text-xs">
+            <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded-full flex items-center">
+              <Flame className="h-3 w-3 mr-1" />
+              {calories} cal
+            </span>
+            <span className="px-2 py-1 bg-green-50 text-green-700 rounded-full flex items-center">
+              <Drumstick className="h-3 w-3 mr-1" />
+              {protein}g protein
+            </span>
+          </div>
+          
+          <div className="flex space-x-2">
+            {/* Edit button with stop propagation to prevent card click */}
+            <Button 
+              size="sm" 
+              variant="ghost" 
+              className="h-8 w-8 p-0"
+              onClick={(e) => {
+                e.stopPropagation();
+                // Navigate to edit page
+                setLocation(`/edit-meal/${id}`);
+              }}
+            >
+              <Pencil className="h-4 w-4 text-gray-500 hover:text-primary transition-colors" />
+            </Button>
+            
+            {/* Nutrition details */}
+            <HoverCard>
+              <HoverCardTrigger>
+                <Info className="h-4 w-4 text-gray-400 cursor-pointer hover:text-primary transition-colors" />
+              </HoverCardTrigger>
+              <HoverCardContent className="w-64 p-3">
+                <div className="flex justify-between mb-2">
+                  <span className="text-sm text-gray-500">Calories</span>
+                  <span className="text-sm font-medium">{calories} cal</span>
+                </div>
+                <div className="flex justify-between mb-2">
+                  <span className="text-sm text-gray-500">Fat</span>
+                  <span className="text-sm font-medium">{fat}g</span>
+                </div>
+                <div className="flex justify-between mb-2">
+                  <span className="text-sm text-gray-500">Carbs</span>
+                  <span className="text-sm font-medium">{carbs}g</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-500">Protein</span>
+                  <span className="text-sm font-medium">{protein}g</span>
+                </div>
+              </HoverCardContent>
+            </HoverCard>
+          </div>
+        </motion.div>
+      </div>
+      
       {/* Clickable indicator */}
       <motion.div 
         className="absolute bottom-2 right-2 text-primary"
