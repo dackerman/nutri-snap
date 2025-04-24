@@ -1,6 +1,6 @@
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
-import { Strategy as GoogleStrategy } from "passport-google-oauth20";
+import { Strategy as GoogleStrategy, Profile as GoogleProfile } from "passport-google-oauth20";
 import { Express, Request } from "express";
 import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
@@ -10,6 +10,13 @@ import { User as SelectUser } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
+
+// Extend the session type to include our custom properties
+declare module 'express-session' {
+  interface SessionData {
+    returnTo?: string;
+  }
+}
 
 // Extend Express Request with user property
 declare global {
@@ -99,11 +106,26 @@ export function setupAuth(app: Express) {
     console.log('REPL_SLUG:', process.env.REPL_SLUG);
     console.log('REPL_OWNER:', process.env.REPL_OWNER);
     
-    // Get hostname from request object (will be used in Google routes)
-    let callbackURL = 'http://localhost:5000/api/auth/google/callback';
+    // Track currently registered redirect URI (for verification)
+    // For Google OAuth configuration, add the following redirect URIs:
+    // 1. https://workspace.davidackerman1.repl.co/api/auth/google/callback
+    // 2. https://{REPL_ID}.id.replit.app/api/auth/google/callback
     
-    // The actual callback URL will be constructed at request time
-    // using the host header from the client's request
+    let callbackURL;
+    // Determine the callback URL based on the environment
+    if (process.env.REPL_SLUG && process.env.REPL_OWNER) {
+      // Production environment in Replit
+      callbackURL = `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co/api/auth/google/callback`;
+      console.log('Using production callback URL:', callbackURL);
+    } else if (process.env.REPL_ID) {
+      // Development environment in Replit
+      callbackURL = `https://${process.env.REPL_ID}.id.replit.app/api/auth/google/callback`;
+      console.log('Using development callback URL:', callbackURL);
+    } else {
+      // Local development
+      callbackURL = 'http://localhost:5000/api/auth/google/callback';
+      console.log('Using local callback URL:', callbackURL);
+    }
       
     passport.use(
       new GoogleStrategy(
@@ -111,9 +133,12 @@ export function setupAuth(app: Express) {
           clientID: process.env.GOOGLE_CLIENT_ID,
           clientSecret: process.env.GOOGLE_CLIENT_SECRET,
           callbackURL,
-          scope: ['profile', 'email']
+          // Additional parameters to help with debugging
+          passReqToCallback: true
         },
-        async (accessToken, refreshToken, profile, done) => {
+        async (req: any, accessToken: string, refreshToken: string, profile: any, done: any) => {
+          // Log the incoming request to debug potential issues
+          console.log('Google auth callback received for profile:', profile.id);
           try {
             // Extract profile information
             const email = profile.emails && profile.emails[0] && profile.emails[0].value;
@@ -380,10 +405,23 @@ export function setupAuth(app: Express) {
       googleStrategy._callbackURL = dynamicCallbackURL;
     }
     
-    // Handle authentication
-    passport.authenticate('google', { 
-      failureRedirect: '/auth?error=google-auth-failed',
-      successRedirect: '/'
+    // Handle authentication with a custom callback
+    passport.authenticate('google', {
+      failureRedirect: '/auth?error=google-auth-failed'
     })(req, res, next);
+  }, (req, res) => {
+    // This middleware only runs on successful authentication
+    console.log('Google authentication successful');
+    
+    // Check if we have a return URL in the session
+    const returnTo = req.session?.returnTo;
+    if (returnTo) {
+      console.log('Redirecting to saved URL:', returnTo);
+      delete req.session.returnTo;
+      res.redirect(returnTo);
+    } else {
+      // Default redirect to home page
+      res.redirect('/');
+    }
   });
 }
