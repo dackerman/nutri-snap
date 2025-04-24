@@ -1,6 +1,6 @@
-# NutriTrack AI
+# NutriSnap
 
-NutriTrack AI is a mobile-first nutrition tracking application that leverages AI to simplify meal logging and provide detailed nutritional insights. The app uses image recognition and natural language processing to automatically analyze food and generate accurate nutritional information.
+NutriSnap is a mobile-first nutrition tracking application that leverages AI to simplify meal logging and provide detailed nutritional insights. The app uses image recognition and natural language processing to automatically analyze food and generate accurate nutritional information.
 
 ## Features
 

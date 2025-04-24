@@ -82,10 +82,10 @@ export default function AuthPage() {
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle className="text-2xl text-center">
-              NutritionTracker
+              NutriSnap
             </CardTitle>
             <CardDescription className="text-center">
-              Sign in to track your nutrition
+              Sign in to NutriSnap
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -255,10 +255,10 @@ export default function AuthPage() {
       </div>
       <div className="w-full md:w-1/2 bg-gradient-to-br from-primary to-purple-700 text-white p-8 flex flex-col justify-center items-center">
         <div className="max-w-lg">
-          <h1 className="text-4xl font-bold mb-4">Track Your Nutrition Journey</h1>
+          <h1 className="text-4xl font-bold mb-4">Welcome to NutriSnap</h1>
           <p className="text-lg mb-6">
             Upload photos of your food and let AI analyze the nutritional content.
-            Monitor your daily intake and make healthier choices.
+            Monitor your daily intake and make healthier choices with NutriSnap.
           </p>
           <ul className="space-y-2 mb-6">
             <li className="flex items-center">

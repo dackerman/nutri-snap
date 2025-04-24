@@ -32,7 +32,7 @@ if (process.env.APP_BASE_URL) {
 // Auth-specific configuration
 const authConfig = {
   // Session settings
-  sessionSecret: process.env.SESSION_SECRET || 'nutrition-tracker-session-secret',
+  sessionSecret: process.env.SESSION_SECRET || 'nutrisnap-session-secret',
   cookieMaxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
   
   // Google OAuth settings
