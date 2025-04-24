@@ -40,11 +40,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get date from query parameter or use current date
       const dateStr = req.query.date as string || new Date().toISOString().split('T')[0];
       
-      // Create date object (we'll adjust for Eastern time in the storage layer)
+      // Get timezone offset in minutes from the request
+      const timezoneOffset = parseInt(req.query.tzOffset as string || '0');
+      
+      // Create date object based on the provided date string, at 00:00:00 local time
       const date = new Date(dateStr + 'T00:00:00Z');
       
       // Add logging to help with debugging
-      console.log(`Fetching meals for date: ${dateStr}, parsed as: ${date.toISOString()}`);
+      console.log(`Fetching meals for date: ${dateStr}, with timezone offset: ${timezoneOffset}, parsed as: ${date.toISOString()}`);
       
       if (isNaN(date.getTime())) {
         return res.status(400).json({ message: "Invalid date format. Use ISO format (YYYY-MM-DD)" });
@@ -52,7 +55,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // If user is logged in, filter by userId
       const userId = req.isAuthenticated() ? req.user?.id : undefined;
-      const meals = await storage.getMealsByDate(date, userId);
+      const meals = await storage.getMealsByDate(date, userId, timezoneOffset);
       
       console.log(`Found ${meals.length} meals for date ${dateStr}`);
       res.json(meals);
@@ -467,11 +470,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get date from query parameter or use current date
       const dateStr = req.query.date as string || new Date().toISOString().split('T')[0];
       
-      // Create date object (we'll adjust for Eastern time in the storage layer)
+      // Get timezone offset in minutes from the request
+      const timezoneOffset = parseInt(req.query.tzOffset as string || '0');
+      
+      // Create date object based on the provided date string
       const date = new Date(dateStr + 'T00:00:00Z');
       
       // Add logging to help with debugging
-      console.log(`Calculating summary for date: ${dateStr}, parsed as: ${date.toISOString()}`);
+      console.log(`Calculating summary for date: ${dateStr}, with timezone offset: ${timezoneOffset}, parsed as: ${date.toISOString()}`);
       
       if (isNaN(date.getTime())) {
         return res.status(400).json({ message: "Invalid date format. Use ISO format (YYYY-MM-DD)" });
@@ -479,7 +485,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Filter by logged in user if authenticated
       const userId = req.isAuthenticated() ? req.user?.id : undefined;
-      const meals = await storage.getMealsByDate(date, userId);
+      const meals = await storage.getMealsByDate(date, userId, timezoneOffset);
       
       const summary = meals.reduce((acc, meal) => {
         acc.calories += meal.calories || 0;

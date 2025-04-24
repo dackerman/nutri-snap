@@ -63,29 +63,33 @@ export class DatabaseStorage implements IStorage {
     return updatedUser || undefined;
   }
 
-  async getMealsByDate(date: Date, userId?: number): Promise<Meal[]> {
-    console.log(`In storage.getMealsByDate with date: ${date.toISOString()}`);
+  async getMealsByDate(date: Date, userId?: number, tzOffset: number = 0): Promise<Meal[]> {
+    console.log(`In storage.getMealsByDate with date: ${date.toISOString()}, tzOffset: ${tzOffset} minutes`);
     
-    // For simplicity and to show all meals in the current calendar day (local time),
-    // we'll use a wider date range that covers both UTC and Eastern time interpretation
-    // of the same calendar date
+    // Convert tzOffset from minutes to hours for easier calculations
+    const tzOffsetHours = tzOffset / 60;
     
-    // Start at 00:00:00 UTC for the requested date
+    // Calculate start of day in user's local timezone
+    // We adjust by the timezone offset to get the correct UTC time that corresponds to midnight in the user's timezone
     const startOfDay = new Date(Date.UTC(
       date.getUTCFullYear(),
       date.getUTCMonth(), 
-      date.getUTCDate()
+      date.getUTCDate(),
+      -tzOffsetHours, // Convert from local midnight to UTC
+      0, 0, 0
     ));
     
-    // End at 23:59:59 UTC for the requested date
+    // End of day in user's local timezone (23:59:59.999)
     const endOfDay = new Date(Date.UTC(
       date.getUTCFullYear(),
       date.getUTCMonth(), 
-      date.getUTCDate() + 1
+      date.getUTCDate(),
+      24 - tzOffsetHours - 1, // Convert from local 11:59 PM to UTC
+      59, 59, 999
     ));
     
     // Debug logs
-    console.log(`Date range: ${startOfDay.toISOString()} - ${endOfDay.toISOString()}`);
+    console.log(`Timezone adjusted date range: ${startOfDay.toISOString()} - ${endOfDay.toISOString()}`);
     
     let conditions = [
       gte(meals.timestamp, startOfDay),

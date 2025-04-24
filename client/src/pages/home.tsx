@@ -19,16 +19,27 @@ export default function Home() {
   const today = new Date();
   const dateString = today.toISOString().split('T')[0];
 
-  // Fetch today's meals
+  // Get the user's timezone offset
+  const timezoneOffset = new Date().getTimezoneOffset();
+
+  // Fetch today's meals with timezone offset
   const { data: meals, isLoading: mealsLoading } = useQuery<Meal[]>({
-    queryKey: ['/api/meals', dateString],
+    queryKey: ['/api/meals', dateString, timezoneOffset],
+    queryFn: async () => {
+      const response = await fetch(`/api/meals?date=${dateString}&tzOffset=${timezoneOffset}`);
+      return response.json();
+    },
     // Add refetch interval to periodically check for updates
     refetchInterval: 60000, // Refetch every minute as a fallback
   });
 
-  // Fetch nutritional summary
+  // Fetch nutritional summary with timezone offset
   const { data: summary, isLoading: summaryLoading } = useQuery<{calories: number, fat: number, carbs: number, protein: number}>({
-    queryKey: ['/api/summary', dateString],
+    queryKey: ['/api/summary', dateString, timezoneOffset],
+    queryFn: async () => {
+      const response = await fetch(`/api/summary?date=${dateString}&tzOffset=${timezoneOffset}`);
+      return response.json();
+    },
     // Also refetch the summary on the same schedule
     refetchInterval: 60000,
   });
