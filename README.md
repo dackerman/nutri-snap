@@ -56,13 +56,30 @@ NutriTrack AI is a mobile-first nutrition tracking application that leverages AI
 - OpenAI API key
 
 ### Environment Setup
-The application requires these environment variables:
+The application uses a centralized configuration system that automatically detects environment (development/production) and adapts settings accordingly.
+
+Required environment variables:
 ```
+# Database connection
 DATABASE_URL=postgresql://[user]:[password]@[host]:[port]/[database]
+
+# Authentication
 OPENAI_API_KEY=your_openai_api_key
 GOOGLE_CLIENT_ID=your_google_client_id
 GOOGLE_CLIENT_SECRET=your_google_client_secret
+SESSION_SECRET=your_session_secret
 ```
+
+Optional environment variables:
+```
+# Explicitly set the base URL (otherwise auto-detected)
+APP_BASE_URL=https://your-custom-domain.com
+
+# Override environment detection
+NODE_ENV=production
+```
+
+See `.env.example` for a complete list of supported variables.
 
 ### Installation
 1. Clone the repository

@@ -10,6 +10,7 @@ import { User as SelectUser } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
+import config from "./config";
 
 // Extend the session type to include our custom properties
 declare module 'express-session' {
@@ -50,12 +51,14 @@ export function setupAuth(app: Express) {
   });
 
   const sessionSettings: session.SessionOptions = {
-    secret: process.env.SESSION_SECRET || "nutrition-tracker-secret",
+    secret: config.auth.sessionSecret,
     resave: false,
     saveUninitialized: false,
     store: sessionStore,
     cookie: {
-      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      maxAge: config.auth.cookieMaxAge,
+      secure: !config.isDevelopment, // Use secure cookies in production
+      sameSite: 'lax'
     },
   };
 
@@ -106,26 +109,9 @@ export function setupAuth(app: Express) {
     console.log('REPL_SLUG:', process.env.REPL_SLUG);
     console.log('REPL_OWNER:', process.env.REPL_OWNER);
     
-    // Track currently registered redirect URI (for verification)
-    // For Google OAuth configuration, add the following redirect URIs:
-    // 1. https://workspace.davidackerman1.repl.co/api/auth/google/callback
-    // 2. https://{REPL_ID}.id.replit.app/api/auth/google/callback
-    
-    let callbackURL;
-    // Determine the callback URL based on the environment
-    if (process.env.REPL_SLUG && process.env.REPL_OWNER) {
-      // Production environment in Replit
-      callbackURL = `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co/api/auth/google/callback`;
-      console.log('Using production callback URL:', callbackURL);
-    } else if (process.env.REPL_ID) {
-      // Development environment in Replit
-      callbackURL = `https://${process.env.REPL_ID}.id.replit.app/api/auth/google/callback`;
-      console.log('Using development callback URL:', callbackURL);
-    } else {
-      // Local development
-      callbackURL = 'http://localhost:5000/api/auth/google/callback';
-      console.log('Using local callback URL:', callbackURL);
-    }
+    // Use the callback URL from our centralized config
+    const callbackURL = config.auth.googleCallbackUrl;
+    console.log('Using configured callback URL:', callbackURL);
       
     passport.use(
       new GoogleStrategy(
@@ -288,20 +274,9 @@ export function setupAuth(app: Express) {
       });
     }
     
-    // Get host from request
-    // In Replit environment, we should use a specific domain format
-    let dynamicCallbackURL;
-    
-    if (process.env.REPL_SLUG && process.env.REPL_OWNER) {
-      // We're in a Replit environment, use the repl.co domain
-      dynamicCallbackURL = `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co/api/auth/google/callback`;
-    } else {
-      // Local development or other environment
-      const protocol = req.protocol || 'http';
-      const host = req.get('host') || 'localhost:5000';
-      dynamicCallbackURL = `${protocol}://${host}/api/auth/google/callback`;
-    }
-    console.log('Dynamic callback URL:', dynamicCallbackURL);
+    // Use the callback URL from our centralized config
+    const dynamicCallbackURL = config.auth.googleCallbackUrl;
+    console.log('Using configured callback URL for auth route:', dynamicCallbackURL);
     
     // Use the dynamic callback URL
     // We need to use a type assertion because TypeScript doesn't know about internal properties
@@ -387,16 +362,9 @@ export function setupAuth(app: Express) {
       return res.redirect('/auth?error=google-auth-not-configured');
     }
     
-    // Get the same callback URL that we used for the initial request
-    let dynamicCallbackURL;
-    if (process.env.REPL_SLUG && process.env.REPL_OWNER) {
-      dynamicCallbackURL = `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co/api/auth/google/callback`;
-    } else {
-      const protocol = req.protocol || 'http';
-      const host = req.get('host') || 'localhost:5000';
-      dynamicCallbackURL = `${protocol}://${host}/api/auth/google/callback`;
-    }
-    console.log('Callback URL:', dynamicCallbackURL);
+    // Use the callback URL from our centralized config
+    const dynamicCallbackURL = config.auth.googleCallbackUrl;
+    console.log('Using configured callback URL for callback route:', dynamicCallbackURL);
     
     // Update the callback URL in the strategy
     const passportAny = passport as any;
