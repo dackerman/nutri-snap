@@ -7,7 +7,15 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || "" });
 // Generate a realistic food image based on description
 export async function generateFoodImage(description: string, foodName?: string): Promise<string> {
   try {
-    const prompt = `A photorealistic, appetizing image of ${foodName || "food"}: ${description}. This should look like a smartphone photo of real food, not a 3D render or illustration. The image should have natural lighting and be shot from above (top-down view) as if someone is about to eat it. No text, no watermarks, high quality, high resolution.`;
+    const prompt = `A photorealistic, high-quality image of ${foodName || "food"}: ${description}. 
+This should look like a smartphone photo of real food on a plate or in a bowl, not a 3D render or illustration.
+The image should be food-photography style with natural lighting, showcasing the details and textures of the food.
+It should be shot from slightly above (¾ angle or top-down view) to showcase the entire dish.
+The background should be minimal and elegant - perhaps a wooden table, marble countertop, or neutral background.
+No text, no watermarks, no human hands or faces, just the food presented beautifully.
+The food should look delicious, appetizing, and professionally plated.`;
+    
+    console.log(`Generating image with prompt: ${prompt}`);
     
     const response = await openai.images.generate({
       model: "dall-e-3",

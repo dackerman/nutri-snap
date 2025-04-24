@@ -236,11 +236,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           try {
             console.log(`Generating AI image for meal ${meal.id} using description: ${mealData.description}`);
             
-            // Use food name from analysis if available, otherwise use a generic description
+            // Use food name from analysis if available, and combine with description for better image
             const foodName = analysis.foodName || "food";
             
-            // Generate the image
-            const generatedImageBase64 = await generateFoodImage(mealData.description, foodName);
+            // Create an enhanced description combining food name and description
+            const enhancedDescription = `${foodName}: ${mealData.description || ""}`.trim();
+            
+            // Generate the image with both food name and description
+            const generatedImageBase64 = await generateFoodImage(enhancedDescription, foodName);
             
             // Set the image URL
             (updateData as any).imageUrl = `data:image/png;base64,${generatedImageBase64}`;
@@ -367,8 +370,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               // Use food name if available, otherwise use a generic description
               const foodName = mealData.foodName || "food";
               
-              // Generate the image
-              const generatedImageBase64 = await generateFoodImage(mealData.description, foodName);
+              // Create an enhanced description combining food name and description
+              const enhancedDescription = `${foodName}: ${mealData.description || ""}`.trim();
+              
+              // Generate the image with both food name and description
+              const generatedImageBase64 = await generateFoodImage(enhancedDescription, foodName);
               
               // Set the image URL
               finalUpdates.imageUrl = `data:image/png;base64,${generatedImageBase64}`;
