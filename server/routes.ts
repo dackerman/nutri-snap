@@ -475,6 +475,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create date object (we'll adjust for Eastern time in the storage layer)
       const date = new Date(dateStr + 'T00:00:00Z');
       
+      // Force the year to be 2025 if not specified in the query
+      if (!req.query.date) {
+        date.setFullYear(2025);
+      }
+      
       // Add logging to help with debugging
       console.log(`Calculating summary for date: ${dateStr}, parsed as: ${date.toISOString()}`);
       
