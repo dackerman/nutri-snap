@@ -11,6 +11,7 @@ import { PlusIcon } from "lucide-react";
 import type { Meal } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 import { motion } from "framer-motion";
+import nutriSnapLogo from "@/assets/nutrisnap-logo.png";
 
 export default function Home() {
   const [, setLocation] = useLocation();
@@ -42,7 +43,7 @@ export default function Home() {
       <header className="bg-white border-b border-gray-200 shadow-sm fixed top-0 left-0 right-0 z-10">
         <div className="container px-4 py-3 mx-auto flex justify-between items-center">
           <div className="flex items-center">
-            <span className="material-icons text-primary mr-2">eco</span>
+            <img src={nutriSnapLogo} alt="NutriSnap Logo" className="w-8 h-8 mr-2" />
             <h1 className="text-xl font-semibold text-primary-dark">NutriSnap</h1>
           </div>
           <div className="flex items-center gap-2">

@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { insertUserSchema } from "@shared/schema";
+import nutriSnapLogo from "@/assets/nutrisnap-logo.png";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -81,6 +82,9 @@ export default function AuthPage() {
       <div className="w-full md:w-1/2 flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardHeader>
+            <div className="flex justify-center mb-2">
+              <img src={nutriSnapLogo} alt="NutriSnap Logo" className="w-16 h-16" />
+            </div>
             <CardTitle className="text-2xl text-center">
               NutriSnap
             </CardTitle>
