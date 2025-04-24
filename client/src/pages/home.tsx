@@ -16,12 +16,8 @@ import nutriSnapLogo from "@/assets/nutrisnap-logo.png";
 export default function Home() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
-  // Make sure we're using the current date with the correct year (2025)
   const today = new Date();
-  // Force the year to be 2025 as mentioned by the user
-  today.setFullYear(2025);
   const dateString = today.toISOString().split('T')[0];
-  console.log("Using date:", dateString);
 
   // Fetch today's meals
   const { data: meals, isLoading: mealsLoading } = useQuery<Meal[]>({
