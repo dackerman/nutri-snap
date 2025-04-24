@@ -155,6 +155,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (additionalImages.length === 0) {
           imageBase64 = mainImage.buffer.toString('base64');
           mealData.imageUrl = `data:${mainImage.mimetype};base64,${imageBase64}`;
+          mealData.userProvidedImage = true; // User provided the image
         } else {
           // If we have both main and additional images, store as JSON array
           imageBase64 = mainImage.buffer.toString('base64');
@@ -165,6 +166,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             )
           ];
           mealData.imageUrl = JSON.stringify(allImages);
+          mealData.userProvidedImage = true; // User provided the images
         }
       } else if (additionalImages.length > 0) {
         // If we only have additional images with no main image
@@ -174,17 +176,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (additionalImages.length === 1) {
           // Just one additional image
           mealData.imageUrl = `data:${firstImage.mimetype};base64,${imageBase64}`;
+          mealData.userProvidedImage = true; // User provided the image
         } else {
           // Multiple additional images
           const allImages = additionalImages.map(img => 
             `data:${img.mimetype};base64,${img.buffer.toString('base64')}`
           );
           mealData.imageUrl = JSON.stringify(allImages);
+          mealData.userProvidedImage = true; // User provided the images
         }
       } else if (hasDescription) {
         // No images provided but we have a description - we'll generate an image later
         // Set a placeholder image URL for now
         mealData.imageUrl = ""; 
+        mealData.userProvidedImage = false; // AI will generate the image
         willGenerateImage = true;
       }
 
@@ -269,7 +274,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // API endpoint to update a meal
+  // API endpoint to update a meal with smart regeneration
   app.patch("/api/meals/:id", async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
@@ -284,8 +289,144 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Meal not found" });
       }
       
-      const updatedMeal = await storage.updateMeal(id, req.body);
+      // Check what fields are being updated
+      const updates = req.body;
+      
+      // Copy existing meal data so we can modify it before saving
+      const mealData = { ...existingMeal, ...updates };
+      
+      // Track if we need to trigger AI processing
+      let needsReanalysis = false;
+      let needsImageGeneration = false;
+      
+      // Check if description was changed and meal was using AI generated image
+      if (
+        updates.description && 
+        updates.description !== existingMeal.description && 
+        !existingMeal.userProvidedImage
+      ) {
+        console.log(`Description changed for meal ${id}, will regenerate image`);
+        needsImageGeneration = true;
+      }
+      
+      // If we're updating the image
+      if (updates.imageUrl && updates.imageUrl !== existingMeal.imageUrl) {
+        console.log(`Image changed for meal ${id}, will reanalyze`);
+        needsReanalysis = true;
+        // Mark that the image is now user-provided
+        mealData.userProvidedImage = true;
+      }
+      
+      // Set analysisPending flag if we need to reanalyze or regenerate
+      if (needsReanalysis || needsImageGeneration) {
+        mealData.analysisPending = true;
+      }
+      
+      // Update meal with initial changes
+      const updatedMeal = await storage.updateMeal(id, mealData);
+      
+      // Return immediately with the updated meal
       res.json(updatedMeal);
+      
+      // Handle any regeneration or reanalysis asynchronously
+      if (needsReanalysis || needsImageGeneration) {
+        try {
+          // Get image data for analysis
+          let imageBase64 = "";
+          if (mealData.imageUrl) {
+            // Handle both single image and array of images
+            if (isJsonArray(mealData.imageUrl)) {
+              const images = JSON.parse(mealData.imageUrl);
+              if (images.length > 0) {
+                // Use the first image for analysis
+                const firstImage = images[0];
+                const dataUrlParts = firstImage.split(',');
+                if (dataUrlParts.length > 1) {
+                  imageBase64 = dataUrlParts[1]; // Get the base64 part
+                }
+              }
+            } else {
+              // Single image
+              const dataUrlParts = mealData.imageUrl.split(',');
+              if (dataUrlParts.length > 1) {
+                imageBase64 = dataUrlParts[1]; // Get the base64 part
+              }
+            }
+          }
+          
+          // Start with updating just analysis pending flag when done
+          const finalUpdates: any = {
+            analysisPending: false
+          };
+          
+          // If description changed and we need to regenerate the image
+          if (needsImageGeneration) {
+            try {
+              console.log(`Generating new AI image for meal ${id} using description: ${mealData.description}`);
+              
+              // Use food name if available, otherwise use a generic description
+              const foodName = mealData.foodName || "food";
+              
+              // Generate the image
+              const generatedImageBase64 = await generateFoodImage(mealData.description, foodName);
+              
+              // Set the image URL
+              finalUpdates.imageUrl = `data:image/png;base64,${generatedImageBase64}`;
+              finalUpdates.userProvidedImage = false;
+              
+              console.log(`Successfully regenerated AI image for meal ${id}`);
+              
+              // Update image base64 for analysis
+              imageBase64 = generatedImageBase64;
+            } catch (imageError) {
+              console.error(`Error generating image for meal ${id}:`, imageError);
+              // Continue with analysis even if image generation fails
+            }
+          }
+          
+          // If we need to reanalyze nutrition data
+          if (needsReanalysis || needsImageGeneration) {
+            // Run the analysis
+            const analysis = await analyzeFood(imageBase64, mealData.description);
+            
+            // Update nutrition data
+            finalUpdates.calories = analysis.calories;
+            finalUpdates.fat = analysis.fat;
+            finalUpdates.carbs = analysis.carbs;
+            finalUpdates.protein = analysis.protein || 0;
+            
+            // If user didn't provide these fields, use the AI's suggestions
+            if (!mealData.foodName && analysis.foodName) {
+              finalUpdates.foodName = analysis.foodName;
+            }
+            
+            if (!mealData.brandName && analysis.brandName) {
+              finalUpdates.brandName = analysis.brandName;
+            }
+            
+            if (!mealData.quantity && analysis.quantity) {
+              finalUpdates.quantity = analysis.quantity;
+            }
+            
+            if (!mealData.unit && analysis.unit) {
+              finalUpdates.unit = analysis.unit;
+            }
+          }
+          
+          // Apply all the final updates
+          await storage.updateMeal(id, finalUpdates);
+          console.log(`Successfully updated meal ${id} with regenerated data`);
+          
+          // Broadcast update to all connected clients
+          if (global.broadcastMealUpdate) {
+            global.broadcastMealUpdate(id);
+          }
+        } catch (processingError) {
+          console.error(`Error processing meal ${id}:`, processingError);
+          // Mark the meal as no longer pending, but with analysis failed
+          await storage.updateMeal(id, { analysisPending: false });
+        }
+      }
     } catch (error) {
       console.error("Error updating meal:", error);
       res.status(500).json({ message: "Failed to update meal" });

@@ -35,6 +35,7 @@ export const meals = pgTable("meals", {
   quantity: integer("quantity"), // The numeric amount
   unit: text("unit"), // The unit of measurement (grams, ounces, count)
   analysisPending: boolean("analysis_pending").default(false), // Flag to indicate if analysis is in progress
+  userProvidedImage: boolean("user_provided_image").default(false), // Flag to track if image was provided by user or AI generated
   timestamp: timestamp("timestamp").defaultNow().notNull(),
   // No physical storage of images, we're assuming imageUrl could be a data URI or a reference
 });
