@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -28,10 +30,20 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { mealTypeOptions } from "@/lib/utils";
-import { Loader2, Image as ImageIcon, Check, CloudUpload, Camera, Clock, Utensils } from "lucide-react";
+import { 
+  Loader2, 
+  Image as ImageIcon, 
+  Check, 
+  CloudUpload, 
+  Camera, 
+  Clock, 
+  Utensils,
+  CalendarIcon
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { motion, AnimatePresence } from "framer-motion";
+import { format } from "date-fns";
 
 // Form schema
 const formSchema = z
@@ -40,6 +52,10 @@ const formSchema = z
     foodName: z.string().optional(), // Optional to allow AI to detect it
     description: z.string().optional(),
     images: z.array(z.instanceof(File)).optional(), // Multiple images
+    date: z.date({
+      required_error: "Please select a date",
+      invalid_type_error: "That's not a valid date",
+    }),
   })
   .refine(
     (data) => {
@@ -57,11 +73,17 @@ type FormValues = z.infer<typeof formSchema>;
 
 export default function AddMeal() {
   const [, setLocation] = useLocation();
+  const search = useSearch();
   const { toast } = useToast();
   const { user } = useAuth();
   const [isUploading, setIsUploading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-
+  
+  // Parse date from URL query params if available
+  const searchParams = new URLSearchParams(search);
+  const dateParam = searchParams.get('date');
+  const initialDate = dateParam ? new Date(dateParam) : new Date();
+  
   // Form handling
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -69,6 +91,7 @@ export default function AddMeal() {
       mealType: "breakfast",
       foodName: "",
       description: "",
+      date: initialDate,
     },
   });
 
@@ -88,6 +111,12 @@ export default function AddMeal() {
       if (values.description) {
         formData.append("description", values.description);
       }
+      
+      // Add the date information
+      if (values.date) {
+        formData.append("date", values.date.toISOString());
+      }
+      
       // Append multiple images if provided
       if (values.images && values.images.length > 0) {
         // Store first image as main image
@@ -454,6 +483,55 @@ export default function AddMeal() {
 
                 <motion.div
                   custom={4}
+                  variants={formElementVariants}
+                  initial="hidden"
+                  animate="visible"
+                >
+                  <FormField
+                    control={form.control}
+                    name="date"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabel className="flex items-center">
+                          <CalendarIcon className="h-4 w-4 mr-2 text-primary" />
+                          Date
+                        </FormLabel>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant={"outline"}
+                                className={`w-full pl-3 text-left font-normal ${
+                                  !field.value ? "text-muted-foreground" : ""
+                                }`}
+                              >
+                                {field.value ? (
+                                  format(field.value, "MMMM d, yyyy")
+                                ) : (
+                                  <span>Pick a date</span>
+                                )}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={field.value}
+                              onSelect={field.onChange}
+                              disabled={(date) => date > new Date()}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </motion.div>
+
+                <motion.div
+                  custom={5}
                   variants={formElementVariants}
                   initial="hidden"
                   animate="visible"

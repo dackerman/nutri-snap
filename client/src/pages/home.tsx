@@ -76,7 +76,9 @@ export default function Home() {
   });
 
   const handleAddFood = () => {
-    setLocation('/add');
+    // Pass the selected date to the add meal page
+    const dateParam = selectedDate.toISOString();
+    setLocation(`/add?date=${encodeURIComponent(dateParam)}`);
   };
 
   return (
