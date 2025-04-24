@@ -91,7 +91,6 @@ See `.env.example` for a complete list of supported variables.
 3. Set up the database: `npm run db:push`
 4. Start the development server: `npm run dev`
 
-
 ## WebSocket Communications
 
 The application uses WebSockets for real-time updates:
@@ -128,6 +127,16 @@ The system uses wide date ranges when querying to ensure correct data retrieval 
 3. Background process analyzes the food and updates the database
 4. WebSocket notification informs the client that analysis is complete
 5. Client refreshes to show updated nutritional data
+
+## Deployment
+
+To deploy NutriSnap to production:
+
+1. Build the client: `npm run build`
+2. Set NODE_ENV to 'production' in your environment
+3. Start the server: `npm run start`
+
+The application is designed to run on platforms like Vercel, Render, or any Node.js hosting service with PostgreSQL integration.
 
 ## License
 MIT
