@@ -246,6 +246,16 @@ export function setupAuth(app: Express) {
   // Route to initiate Google OAuth flow
   app.get('/api/auth/google', (req, res, next) => {
     console.log('Google auth route accessed');
+    console.log('Request query:', req.query);
+    
+    // Store the referrer in the session so we can redirect back after auth
+    if (req.query.from && typeof req.query.from === 'string') {
+      if (req.session) {
+        req.session.returnTo = req.query.from;
+        console.log('Set returnTo in session:', req.query.from);
+      }
+    }
+    
     if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
       return res.status(503).json({
         error: 'Google authentication is not configured',
@@ -254,17 +264,90 @@ export function setupAuth(app: Express) {
     }
     
     // Get host from request
-    const protocol = req.protocol || 'http';
-    const host = req.get('host') || 'localhost:5000';
-    const dynamicCallbackURL = `${protocol}://${host}/api/auth/google/callback`;
+    // In Replit environment, we should use a specific domain format
+    let dynamicCallbackURL;
+    
+    if (process.env.REPL_SLUG && process.env.REPL_OWNER) {
+      // We're in a Replit environment, use the repl.co domain
+      dynamicCallbackURL = `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co/api/auth/google/callback`;
+    } else {
+      // Local development or other environment
+      const protocol = req.protocol || 'http';
+      const host = req.get('host') || 'localhost:5000';
+      dynamicCallbackURL = `${protocol}://${host}/api/auth/google/callback`;
+    }
     console.log('Dynamic callback URL:', dynamicCallbackURL);
     
     // Use the dynamic callback URL
-    const googleStrategy = passport._strategies.google;
+    // We need to use a type assertion because TypeScript doesn't know about internal properties
+    const passportAny = passport as any;
+    const googleStrategy = passportAny._strategies?.google;
+    
     if (googleStrategy) {
       googleStrategy._callbackURL = dynamicCallbackURL;
     } else {
       console.error('Google strategy not found in passport!');
+      
+      // If the strategy doesn't exist, let's re-initialize it with the correct URL
+      passport.use(
+        new GoogleStrategy(
+          {
+            clientID: process.env.GOOGLE_CLIENT_ID as string,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
+            callbackURL: dynamicCallbackURL,
+            scope: ['profile', 'email']
+          },
+          // Use the same callback function as before
+          async (accessToken, refreshToken, profile, done) => {
+            try {
+              // Extract profile information
+              const email = profile.emails && profile.emails[0] && profile.emails[0].value;
+              if (!email) {
+                return done(new Error('No email provided from Google'));
+              }
+              
+              // Get profile picture
+              const profilePicture = profile.photos && profile.photos[0] && profile.photos[0].value;
+              
+              // Check if user already exists with this Google ID
+              let user = await storage.getUserByGoogleId(profile.id);
+              
+              // If not found by Google ID, try to find by email (for existing users who want to link Google)
+              if (!user) {
+                user = await storage.getUserByEmail(email);
+                
+                if (user) {
+                  // Existing user found by email - link Google account to it
+                  user = await storage.updateUser(user.id, {
+                    googleId: profile.id,
+                    profilePicture: profilePicture || user.profilePicture
+                  });
+                  console.log(`Linked Google account to existing user: ${email}`);
+                } else {
+                  // No user found - create a new one
+                  user = await storage.createUser({
+                    name: profile.displayName || email.split('@')[0],
+                    email,
+                    googleId: profile.id,
+                    profilePicture
+                  });
+                  console.log(`Created new user from Google auth: ${email}`);
+                }
+              } else {
+                // Update user profile with latest Google info
+                user = await storage.updateUser(user.id, {
+                  profilePicture: profilePicture || user.profilePicture
+                });
+              }
+              
+              return done(null, user);
+            } catch (error) {
+              console.error("Google authentication error:", error);
+              return done(error);
+            }
+          }
+        )
+      );
     }
     
     passport.authenticate('google', { scope: ['profile', 'email'] })(req, res, next);
@@ -273,15 +356,34 @@ export function setupAuth(app: Express) {
   // Google OAuth callback route
   app.get('/api/auth/google/callback', (req, res, next) => {
     console.log('Google auth callback route accessed');
+    console.log('Callback query:', req.query);
+    
     if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
       return res.redirect('/auth?error=google-auth-not-configured');
     }
+    
+    // Get the same callback URL that we used for the initial request
+    let dynamicCallbackURL;
+    if (process.env.REPL_SLUG && process.env.REPL_OWNER) {
+      dynamicCallbackURL = `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co/api/auth/google/callback`;
+    } else {
+      const protocol = req.protocol || 'http';
+      const host = req.get('host') || 'localhost:5000';
+      dynamicCallbackURL = `${protocol}://${host}/api/auth/google/callback`;
+    }
+    console.log('Callback URL:', dynamicCallbackURL);
+    
+    // Update the callback URL in the strategy
+    const passportAny = passport as any;
+    const googleStrategy = passportAny._strategies?.google;
+    if (googleStrategy) {
+      googleStrategy._callbackURL = dynamicCallbackURL;
+    }
+    
+    // Handle authentication
     passport.authenticate('google', { 
-      failureRedirect: '/auth?error=google-auth-failed' 
+      failureRedirect: '/auth?error=google-auth-failed',
+      successRedirect: '/'
     })(req, res, next);
-  }, (req, res) => {
-    // Successful authentication
-    console.log('Google authentication successful');
-    res.redirect('/');
   });
 }

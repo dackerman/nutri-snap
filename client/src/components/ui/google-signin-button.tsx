@@ -17,10 +17,14 @@ export function GoogleSignInButton({
   
   // If it's a redirect button, it links directly to the Google auth endpoint
   if (isRedirect) {
+    const href = `/api/auth/google?from=${encodeURIComponent(window.location.href)}`;
+    console.log(`Google auth URL: ${href}`);
+    
     return (
       <a 
-        href="/api/auth/google" 
+        href={href}
         className={`inline-block w-full ${className}`}
+        onClick={() => console.log("Initiating Google Sign-In")}
       >
         <Button
           variant="outline"
