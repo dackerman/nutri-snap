@@ -152,7 +152,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         protein: 0,  // Placeholder until AI analysis completes
         quantity: req.body.quantity || null,
         unit: req.body.unit || null,
-        analysisPending: true // New flag to indicate analysis is pending
+        analysisPending: true, // New flag to indicate analysis is pending
+        userProvidedImage: false // Default to false, will be set to true if user provides image
       };
 
       // Validate the meal data
@@ -525,10 +526,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const monthParam = req.query.month ? parseInt(String(req.query.month)) - 1 : new Date().getMonth(); // 0-indexed
       const tzOffset = req.query.tzOffset ? parseInt(String(req.query.tzOffset)) : new Date().getTimezoneOffset();
       
-      const startDate = new Date(Date.UTC(yearParam, monthParam, 1));
-      const endDate = new Date(Date.UTC(yearParam, monthParam + 1, 0, 23, 59, 59, 999));
+      // Convert tzOffset from minutes to hours for easier calculations
+      const tzOffsetHours = tzOffset / 60;
       
-      console.log(`Fetching month summary from ${startDate.toISOString()} to ${endDate.toISOString()}, TZ offset: ${tzOffset} minutes`);
+      // Start of month in user's local timezone
+      const startOfMonthLocal = new Date(Date.UTC(
+        yearParam, 
+        monthParam, 
+        1, 
+        -tzOffsetHours, // Adjust for timezone
+        0, 0, 0
+      ));
+      
+      // End of month in user's local timezone
+      const endOfMonthLocal = new Date(Date.UTC(
+        yearParam, 
+        monthParam + 1, 
+        0, 
+        24 - tzOffsetHours - 1, // End of day adjusted for timezone
+        59, 59, 999
+      ));
+      
+      console.log(`Fetching month summary from ${startOfMonthLocal.toISOString()} to ${endOfMonthLocal.toISOString()}, TZ offset: ${tzOffset} minutes`);
       
       // Require authentication for this endpoint
       if (!req.isAuthenticated()) {
@@ -543,8 +562,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(meals)
         .where(and(
           eq(meals.userId, userId),
-          gte(meals.timestamp, startDate),
-          lte(meals.timestamp, endDate)
+          gte(meals.timestamp, startOfMonthLocal),
+          lte(meals.timestamp, endOfMonthLocal)
         ));
       
       console.log(`Found ${mealsForMonth.length} meals for the month`);
@@ -553,13 +572,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const dailySummaries: Record<string, { calories: number, fat: number, carbs: number, protein: number }> = {};
       
       // Initialize all days of the month with zero values
-      const daysInMonth = endDate.getDate();
+      const daysInMonth = new Date(yearParam, monthParam + 1, 0).getDate();
       for (let day = 1; day <= daysInMonth; day++) {
-        const dateKey = format(new Date(Date.UTC(yearParam, monthParam, day)), 'yyyy-MM-dd');
+        const dateKey = format(new Date(yearParam, monthParam, day), 'yyyy-MM-dd');
         dailySummaries[dateKey] = { calories: 0, fat: 0, carbs: 0, protein: 0 };
       }
       
-      // Sum up nutritional values by date
+      // Sum up nutritional values by date (group by local date)
       mealsForMonth.forEach(meal => {
         const mealDate = new Date(meal.timestamp);
         // Apply timezone offset to get the correct local day
