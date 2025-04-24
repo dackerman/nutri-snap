@@ -60,46 +60,70 @@ export default function MonthlyCalendar({ onDateSelected }: MonthlyCalendarProps
       setIsLoading(true);
       
       try {
-        const startDate = startOfMonth(currentMonth);
-        const endDate = endOfMonth(currentMonth);
+        // Get the year and month from currentMonth
+        const year = currentMonth.getFullYear();
+        const month = currentMonth.getMonth() + 1; // 1-indexed for API
         
-        // Create a new Map to store the data
-        const newMonthData = new Map<string, DailySummary>();
+        // Get browser's timezone offset in minutes
+        const tzOffset = new Date().getTimezoneOffset();
         
-        // Fetch all month data at once (we'll add a batch endpoint later)
-        for (const day of daysInMonth) {
-          const dateKey = formatDateKey(day);
+        console.log(`Fetching data for ${year}-${month} with timezone offset ${tzOffset}`);
+        
+        // Use the new batch API endpoint to fetch all data at once
+        const response = await fetch(`/api/summary/month?year=${year}&month=${month}&tzOffset=${tzOffset}`, {
+          credentials: 'include'
+        });
+        
+        if (response.ok) {
+          // The response is an object with date strings as keys
+          const dailySummaries = await response.json();
           
-          try {
-            // Fetch the daily summary for this date
-            const response = await fetch(`/api/summary?date=${format(day, 'yyyy-MM-dd')}`, {
-              credentials: 'include'
-            });
+          // Convert the response to our Map format
+          const newMonthData = new Map<string, DailySummary>();
+          
+          // Process each day in the month
+          for (const day of daysInMonth) {
+            const dateKey = formatDateKey(day);
             
-            if (response.ok) {
-              const data = await response.json();
-              newMonthData.set(dateKey, data);
+            // Use the data from the API if available, otherwise use default values
+            if (dailySummaries[dateKey]) {
+              newMonthData.set(dateKey, dailySummaries[dateKey]);
             } else {
-              // Set default values if the request fails
               newMonthData.set(dateKey, { calories: 0, fat: 0, carbs: 0, protein: 0 });
             }
-          } catch (error) {
-            console.error(`Error fetching data for ${dateKey}:`, error);
-            // Set default values for days with errors
+          }
+          
+          setMonthData(newMonthData);
+          console.log('Month data loaded successfully');
+        } else {
+          // If the API call fails, set default values for all days
+          const newMonthData = new Map<string, DailySummary>();
+          
+          for (const day of daysInMonth) {
+            const dateKey = formatDateKey(day);
             newMonthData.set(dateKey, { calories: 0, fat: 0, carbs: 0, protein: 0 });
           }
+          
+          setMonthData(newMonthData);
+          console.error('Failed to fetch month data:', await response.text());
+        }
+      } catch (error) {
+        console.error("Error fetching month data:", error);
+        
+        // Set default values in case of error
+        const newMonthData = new Map<string, DailySummary>();
+        for (const day of daysInMonth) {
+          const dateKey = formatDateKey(day);
+          newMonthData.set(dateKey, { calories: 0, fat: 0, carbs: 0, protein: 0 });
         }
         
         setMonthData(newMonthData);
-      } catch (error) {
-        console.error("Error fetching month data:", error);
       } finally {
         setIsLoading(false);
       }
     };
     
     fetchMonthData();
-    // Remove daysInMonth dependency to prevent re-fetching when it changes
   }, [currentMonth, user]);
 
   // Function to calculate the color based on calories

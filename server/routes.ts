@@ -3,10 +3,13 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { analyzeFood, generateFoodImage } from "./openai";
 import multer from "multer";
-import { insertMealSchema, type Meal } from "@shared/schema";
+import { insertMealSchema, type Meal, meals } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
 import { setupAuth } from "./auth";
 import { WebSocketServer, WebSocket } from "ws";
+import { db } from "./db";
+import { and, eq, gte, lte } from "drizzle-orm";
+import { format } from "date-fns";
 
 // Add global type declaration for our broadcast function
 declare global {
@@ -511,6 +514,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error calculating summary:", error);
       res.status(500).json({ message: "Failed to calculate summary" });
+    }
+  });
+  
+  // New API endpoint for batch fetching monthly summaries
+  app.get("/api/summary/month", async (req: Request, res: Response) => {
+    try {
+      // Get year and month from query or use current date
+      const yearParam = req.query.year ? parseInt(String(req.query.year)) : new Date().getFullYear();
+      const monthParam = req.query.month ? parseInt(String(req.query.month)) - 1 : new Date().getMonth(); // 0-indexed
+      const tzOffset = req.query.tzOffset ? parseInt(String(req.query.tzOffset)) : new Date().getTimezoneOffset();
+      
+      const startDate = new Date(Date.UTC(yearParam, monthParam, 1));
+      const endDate = new Date(Date.UTC(yearParam, monthParam + 1, 0, 23, 59, 59, 999));
+      
+      console.log(`Fetching month summary from ${startDate.toISOString()} to ${endDate.toISOString()}, TZ offset: ${tzOffset} minutes`);
+      
+      // Require authentication for this endpoint
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      const userId = req.user?.id;
+      
+      // Use the indexes we created for better performance
+      const mealsForMonth = await db
+        .select()
+        .from(meals)
+        .where(and(
+          eq(meals.userId, userId),
+          gte(meals.timestamp, startDate),
+          lte(meals.timestamp, endDate)
+        ));
+      
+      console.log(`Found ${mealsForMonth.length} meals for the month`);
+      
+      // Group meals by date and calculate daily summaries
+      const dailySummaries: Record<string, { calories: number, fat: number, carbs: number, protein: number }> = {};
+      
+      // Initialize all days of the month with zero values
+      const daysInMonth = endDate.getDate();
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dateKey = format(new Date(Date.UTC(yearParam, monthParam, day)), 'yyyy-MM-dd');
+        dailySummaries[dateKey] = { calories: 0, fat: 0, carbs: 0, protein: 0 };
+      }
+      
+      // Sum up nutritional values by date
+      mealsForMonth.forEach(meal => {
+        const mealDate = new Date(meal.timestamp);
+        // Apply timezone offset to get the correct local day
+        const adjustedDate = new Date(mealDate.getTime() - tzOffset * 60 * 1000);
+        const dateKey = format(adjustedDate, 'yyyy-MM-dd');
+        
+        if (!dailySummaries[dateKey]) {
+          dailySummaries[dateKey] = { calories: 0, fat: 0, carbs: 0, protein: 0 };
+        }
+        
+        dailySummaries[dateKey].calories += meal.calories || 0;
+        dailySummaries[dateKey].fat += meal.fat || 0;
+        dailySummaries[dateKey].carbs += meal.carbs || 0;
+        dailySummaries[dateKey].protein += meal.protein || 0;
+      });
+      
+      res.json(dailySummaries);
+    } catch (error) {
+      console.error("Error fetching monthly summary:", error);
+      res.status(500).json({ message: "Failed to fetch monthly summary" });
     }
   });
   
