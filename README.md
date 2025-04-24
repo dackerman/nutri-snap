@@ -1,5 +1,9 @@
 # NutriSnap
 
+<p align="center">
+  <img src="client/src/assets/nutrisnap-hero.png" alt="NutriSnap - AI-Powered Nutrition Tracking" width="800" />
+</p>
+
 NutriSnap is a mobile-first nutrition tracking application that leverages AI to simplify meal logging and provide detailed nutritional insights. The app uses image recognition and natural language processing to automatically analyze food and generate accurate nutritional information.
 
 ## Features
