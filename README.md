@@ -91,25 +91,6 @@ See `.env.example` for a complete list of supported variables.
 3. Set up the database: `npm run db:push`
 4. Start the development server: `npm run dev`
 
-## API Endpoints
-
-### Authentication
-- `POST /api/register` - Create a new user account with email/password
-- `POST /api/login` - Log in to an existing account with email/password
-- `POST /api/logout` - Log out the current user
-- `GET /api/user` - Get the current user's information
-- `GET /api/auth/google` - Initiate Google OAuth authentication flow
-- `GET /api/auth/google/callback` - Handle Google OAuth callback
-
-### Meal Management
-- `GET /api/meals` - Get meals for the current day
-- `GET /api/meals/:id` - Get a specific meal by ID
-- `POST /api/meals` - Create a new meal (supports multipart/form-data for images)
-- `PATCH /api/meals/:id` - Update an existing meal
-- `DELETE /api/meals/:id` - Delete a meal
-
-### Nutritional Summary
-- `GET /api/summary` - Get nutritional summary for the current day
 
 ## WebSocket Communications
 
