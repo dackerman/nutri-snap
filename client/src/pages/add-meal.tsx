@@ -335,6 +335,15 @@ export default function AddMeal() {
                             errorMessage={form.formState.errors.images?.message as string}
                           />
                         </FormControl>
+                        <motion.div 
+                          className="text-xs text-gray-500 mt-1 flex items-center"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ delay: 0.5 }}
+                        >
+                          <span className="material-icons text-xs mr-1">auto_awesome</span>
+                          If no image is provided, AI will generate one from your description
+                        </motion.div>
                         <FormMessage />
                       </FormItem>
                     )}

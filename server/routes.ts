@@ -1,7 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { analyzeFood } from "./openai";
+import { analyzeFood, generateFoodImage } from "./openai";
 import multer from "multer";
 import { insertMealSchema, type Meal } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
@@ -148,6 +148,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Process images
       let imageBase64 = ""; // For AI analysis (use main image)
+      let willGenerateImage = false; // Flag to indicate if we should generate an image
       
       if (mainImage) {
         // If we only have the main image with no additional images
@@ -180,6 +181,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           );
           mealData.imageUrl = JSON.stringify(allImages);
         }
+      } else if (hasDescription) {
+        // No images provided but we have a description - we'll generate an image later
+        // Set a placeholder image URL for now
+        mealData.imageUrl = ""; 
+        willGenerateImage = true;
       }
 
       // Create the meal in storage immediately with placeholder values
@@ -218,6 +224,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         if (!mealData.unit && analysis.unit) {
           (updateData as any).unit = analysis.unit;
+        }
+
+        // Generate an AI image if needed (no images were provided but we have a description)
+        if (willGenerateImage) {
+          try {
+            console.log(`Generating AI image for meal ${meal.id} using description: ${mealData.description}`);
+            
+            // Use food name from analysis if available, otherwise use a generic description
+            const foodName = analysis.foodName || "food";
+            
+            // Generate the image
+            const generatedImageBase64 = await generateFoodImage(mealData.description, foodName);
+            
+            // Set the image URL
+            (updateData as any).imageUrl = `data:image/png;base64,${generatedImageBase64}`;
+            
+            console.log(`Successfully generated AI image for meal ${meal.id}`);
+          } catch (imageError) {
+            console.error(`Error generating image for meal ${meal.id}:`, imageError);
+            // Continue with analysis even if image generation fails
+          }
         }
 
         // Update the meal with the analysis results
