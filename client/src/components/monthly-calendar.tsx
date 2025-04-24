@@ -66,7 +66,7 @@ export default function MonthlyCalendar({ onDateSelected }: MonthlyCalendarProps
         // Create a new Map to store the data
         const newMonthData = new Map<string, DailySummary>();
         
-        // Fetch data for each day in the month
+        // Fetch all month data at once (we'll add a batch endpoint later)
         for (const day of daysInMonth) {
           const dateKey = formatDateKey(day);
           
@@ -99,7 +99,8 @@ export default function MonthlyCalendar({ onDateSelected }: MonthlyCalendarProps
     };
     
     fetchMonthData();
-  }, [currentMonth, user, daysInMonth]);
+    // Remove daysInMonth dependency to prevent re-fetching when it changes
+  }, [currentMonth, user]);
 
   // Function to calculate the color based on calories
   const getCalorieColor = (calories: number): string => {
