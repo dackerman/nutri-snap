@@ -125,10 +125,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get the meal data from the request
+      // Parse date from request if provided, otherwise use current time
+      let timestamp = new Date();
+      if (req.body.date) {
+        try {
+          timestamp = new Date(req.body.date);
+        } catch (error) {
+          console.warn("Invalid date format provided, using current time instead");
+        }
+      }
+      
       const mealData = {
         userId: req.user?.id,
         mealType: req.body.mealType,
         foodName: req.body.foodName || "",
+        timestamp, // Add custom timestamp
         brandName: req.body.brandName || "",
         description: req.body.description || "",
         imageUrl: "", // Will be populated with images
