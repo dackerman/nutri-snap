@@ -604,7 +604,7 @@ export default function AddMeal() {
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.4 }}
                 >
-                  Your meal has been added to your daily log.
+                  Your meal has been added to your daily log. AI analysis and image generation (if needed) will complete in the background.
                 </motion.p>
               </motion.div>
             </motion.div>
