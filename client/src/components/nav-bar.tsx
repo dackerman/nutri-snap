@@ -33,9 +33,12 @@ export default function NavBar() {
             <span className="material-icons">add_circle</span>
             <span className="text-xs mt-1">Add Meal</span>
           </button>
-          <button className="py-3 px-5 text-gray-500 flex flex-col items-center">
-            <span className="material-icons">insights</span>
-            <span className="text-xs mt-1">Trends</span>
+          <button 
+            className={`py-3 px-5 flex flex-col items-center ${location === '/calendar' ? 'text-primary' : 'text-gray-500'}`}
+            onClick={() => setLocation('/calendar')}
+          >
+            <span className="material-icons">calendar_month</span>
+            <span className="text-xs mt-1">Calendar</span>
           </button>
           <button 
             className="py-3 px-5 text-gray-500 flex flex-col items-center"

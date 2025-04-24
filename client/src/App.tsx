@@ -21,6 +21,7 @@ function Router() {
       <ProtectedRoute path="/add" component={AddMeal} />
       <ProtectedRoute path="/meals/:id" component={MealDetail} />
       <ProtectedRoute path="/edit-meal/:id" component={EditMeal} />
+      <ProtectedRoute path="/calendar" component={CalendarView} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>

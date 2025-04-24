@@ -121,46 +121,60 @@ export default function Home() {
         )}
 
         {/* Date Navigation */}
-        <div className="flex items-center justify-between mb-6 bg-white rounded-lg p-3 shadow-sm">
-          <button 
-            onClick={navigateToPreviousDay}
-            className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-            aria-label="Previous day"
-          >
-            <ChevronLeft className="h-5 w-5 text-gray-600" />
-          </button>
-          
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className="flex items-center gap-2 font-normal justify-center text-gray-700"
+        <div className="mb-6">
+          <div className="flex items-center justify-between bg-white rounded-lg p-3 shadow-sm">
+            <button 
+              onClick={navigateToPreviousDay}
+              className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+              aria-label="Previous day"
+            >
+              <ChevronLeft className="h-5 w-5 text-gray-600" />
+            </button>
+            
+            <div className="flex items-center gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="flex items-center gap-2 font-normal justify-center text-gray-700"
+                  >
+                    <CalendarIcon className="h-4 w-4" />
+                    <span>{format(selectedDate, "MMMM d, yyyy")}</span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={(date) => date && setSelectedDate(date)}
+                    disabled={(date) => date > today}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+              
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="gap-1"
+                onClick={() => setLocation('/calendar')}
               >
-                <CalendarIcon className="h-4 w-4" />
-                <span>{format(selectedDate, "MMMM d, yyyy")}</span>
+                <span className="material-icons text-xs">calendar_month</span>
+                <span className="text-xs">Monthly</span>
               </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={(date) => date && setSelectedDate(date)}
-                disabled={(date) => date > today}
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
-          
-          <button 
-            onClick={navigateToNextDay}
-            className={`p-2 rounded-full transition-colors ${
-              isToday ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-gray-100 text-gray-600'
-            }`}
-            disabled={isToday}
-            aria-label="Next day"
-          >
-            <ChevronRight className="h-5 w-5" />
-          </button>
+            </div>
+            
+            <button 
+              onClick={navigateToNextDay}
+              className={`p-2 rounded-full transition-colors ${
+                isToday ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-gray-100 text-gray-600'
+              }`}
+              disabled={isToday}
+              aria-label="Next day"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </div>
         </div>
 
         {/* Food Timeline */}
