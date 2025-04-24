@@ -1,143 +1,116 @@
-# Testing NutriSnap Frontend
+# NutriSnap Frontend Testing
 
-This directory contains tests for the NutriSnap frontend application. We use a combination of unit tests and integration tests with a stub API implementation.
+This directory contains tests for the NutriSnap frontend application, featuring a comprehensive in-memory stub API implementation that enables realistic testing of frontend interactions.
 
-## Testing Framework
+## Testing Stack
 
-- **Vitest**: Fast testing framework compatible with Vite
+- **Vitest**: A fast testing framework compatible with Vite projects
 - **React Testing Library**: For testing React components
-- **In-Memory Stub API**: For realistic backend interaction simulation
+- **In-Memory Stub API**: Custom implementation for realistic API simulation
+- **WebSocket Mocking**: For testing real-time updates
 
-## Stub API Overview
+## Test Structure
 
-Instead of mocking individual API requests, we use an in-memory stub API that:
+```
+client/src/tests/
+├── README.md
+├── api-interactions.test.ts  # Tests API request/response flow
+├── in-memory-api.test.ts     # Tests the stub API functionality
+├── mocks/
+│   ├── mockApi.ts            # React-based mock API (not used in current tests)
+│   └── stub-api.ts           # Pure TypeScript API stub implementation
+├── simple.test.ts            # Basic test example
+└── websocket.test.ts         # Tests WebSocket interaction
+```
 
-1. Stores records in JavaScript Maps
-2. Implements the same interfaces as the real API
-3. Has test helper methods for creating specific scenarios
-4. Can simulate real-world conditions like network errors, slow responses, etc.
+## Running Tests
 
-## Getting Started
+```bash
+pnpm test                # Run all tests
+pnpm test:watch          # Run tests in watch mode
+pnpm test:coverage       # Generate test coverage report
+```
 
-1. Run tests with:
-   ```bash
-   npm run test
-   ```
+## Stub API Features
 
-2. Run tests in watch mode:
-   ```bash
-   npm run test:watch
-   ```
+Our in-memory stub API provides:
 
-## Writing Tests
+1. **Full Data Persistence**: All data is stored in memory during the test lifecycle, allowing for complex multi-step tests.
 
-### Basic Component Test
+2. **Complete API Coverage**:
+   - User authentication (register, login, logout)
+   - Meal management (create, read, update, delete)
+   - Nutritional summary calculations
+   - WebSocket notifications
 
-```tsx
-import { render, screen } from '@testing-library/react';
-import { inMemoryApi } from './mocks/mockApi';
-import MealCard from '../components/meal-card';
+3. **Timezone Handling**: Proper handling of date ranges based on browser timezone.
 
-describe('MealCard', () => {
-  it('displays meal information', () => {
-    // Create test data
-    const meal = inMemoryApi._seedMeal({
-      foodName: 'Pizza',
-      calories: 300
-    });
-    
-    // Render component
-    render(<MealCard meal={meal} />);
-    
-    // Verify output
-    expect(screen.getByText('Pizza')).toBeInTheDocument();
-    expect(screen.getByText('300')).toBeInTheDocument();
+4. **Edge Case Simulation**:
+   - Network errors
+   - Slow responses
+   - Analysis in progress states
+
+5. **Test Helpers**:
+   - `_seedUser()`: Create test users
+   - `_seedMeal()`: Create test meals
+   - `_reset()`: Clear all data between tests
+   - `_simulateAnalysisPending()`: Simulate asynchronous analysis
+   - `_simulateNetworkError()`: Inject errors for specific methods
+   - `_simulateSlowResponse()`: Add delays to specific methods
+
+## WebSocket Testing
+
+The stub API includes WebSocket simulation:
+
+1. **Connection Management**: Mimics connection establishment and termination
+2. **Message Broadcasting**: Simulates server-to-client notifications
+3. **Event Handlers**: Implements the standard WebSocket event system
+
+## Example: Testing a Complete User Flow
+
+```typescript
+it('demonstrates realistic API flows', async () => {
+  // 1. Register a user
+  const user = inMemoryApi._seedUser({
+    email: 'user@example.com',
+    password: 'password123'
   });
+  
+  // 2. Create a meal with analysis pending
+  const mealResponse = await fetch('/api/meals', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      mealType: 'breakfast',
+      description: 'Eggs and toast',
+      analysisPending: true,
+    }),
+  });
+  
+  const meal = await mealResponse.json();
+  
+  // 3. Simulate background analysis completion
+  let websocketNotified = false;
+  inMemoryApi._registerWebSocketHandler(() => {
+    websocketNotified = true;
+  });
+  
+  inMemoryApi._simulateAnalysisPending(meal.id, 0);
+  
+  // 4. Verify WebSocket was notified
+  expect(websocketNotified).toBe(true);
+  
+  // 5. Verify meal was updated with nutrition data
+  const updatedMeal = inMemoryApi.getMealById(meal.id);
+  expect(updatedMeal?.analysisPending).toBe(false);
+  expect(updatedMeal?.calories).toBeGreaterThan(0);
 });
 ```
 
-### Testing API Interactions
+## Best Practices
 
-```tsx
-import { renderHook, waitFor } from '@testing-library/react';
-import { inMemoryApi, setupFetchMock } from './mocks/mockApi';
-import { useMeals } from '../hooks/use-meals';
-
-describe('useMeals hook', () => {
-  const cleanup = setupFetchMock();
-  
-  afterAll(() => {
-    cleanup();
-  });
-  
-  beforeEach(() => {
-    inMemoryApi._reset();
-  });
-  
-  it('fetches meals for the current day', async () => {
-    // Seed test data
-    const user = inMemoryApi._seedUser({});
-    inMemoryApi._seedMeal({ 
-      userId: user.id,
-      foodName: 'Breakfast Burrito' 
-    });
-    
-    // Use the hook
-    const { result } = renderHook(() => useMeals());
-    
-    // Wait for results
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    
-    // Verify data
-    expect(result.current.data).toHaveLength(1);
-    expect(result.current.data[0].foodName).toBe('Breakfast Burrito');
-  });
-});
-```
-
-### Testing Edge Cases
-
-```tsx
-it('handles analysis pending state', async () => {
-  // Create test data with analysis pending
-  const meal = inMemoryApi._seedMeal({
-    analysisPending: true,
-    foodName: 'Processing Meal'
-  });
-  
-  // Simulate analysis completion after delay
-  inMemoryApi._simulateAnalysisPending(meal.id, 1000);
-  
-  // Render component that uses WebSocket updates
-  render(<MealDetail id={meal.id} />);
-  
-  // Check initial state
-  expect(screen.getByText('Analysis in progress...')).toBeInTheDocument();
-  
-  // Advance timers to trigger WebSocket update
-  vi.advanceTimersByTime(1000);
-  
-  // Verify component updates after WebSocket notification
-  await waitFor(() => {
-    expect(screen.queryByText('Analysis in progress...')).not.toBeInTheDocument();
-    expect(screen.getByText('350')).toBeInTheDocument(); // Updated calories
-  });
-});
-```
-
-## Available Test Helpers
-
-### Seeding Data
-
-- `inMemoryApi._seedUser(userData)`: Create a test user
-- `inMemoryApi._seedMeal(mealData)`: Create a test meal
-
-### Simulating Conditions
-
-- `inMemoryApi._simulateNetworkError(method, probability)`: Make API calls fail randomly
-- `inMemoryApi._simulateSlowResponse(method, delay)`: Add delay to API responses
-- `inMemoryApi._simulateAnalysisPending(mealId, duration)`: Simulate async meal analysis
-
-### Reset State
-
-- `inMemoryApi._reset()`: Clear all data between tests
+1. **Reset Between Tests**: Call `inMemoryApi._reset()` in the `beforeEach` hook.
+2. **Seed Test Data**: Use `_seedUser()` and `_seedMeal()` to create test fixtures.
+3. **Test Edge Cases**: Use the simulation methods to test error handling and loading states.
+4. **Mock Fetch Carefully**: Replace `global.fetch` with a handler that routes to the stub API.
+5. **Test Full Flows**: Test complete user flows from start to finish.
