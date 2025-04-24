@@ -2,18 +2,31 @@ import { pgTable, text, serial, integer, boolean, timestamp } from "drizzle-orm/
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// User model from original file
+// User model with Google OAuth support
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   name: text("name"),
   email: text("email").notNull().unique(),
-  password: text("password").notNull(),
+  password: text("password"), // Now optional for Google auth
+  googleId: text("google_id").unique(), // Google's unique user ID
+  profilePicture: text("profile_picture"), // Profile picture URL from Google
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  lastLogin: timestamp("last_login").defaultNow(),
 });
 
+// Standard email/password registration schema
 export const insertUserSchema = createInsertSchema(users).pick({
   name: true,
   email: true,
   password: true,
+});
+
+// Google registration schema (no password required)
+export const insertGoogleUserSchema = createInsertSchema(users).pick({
+  name: true,
+  email: true,
+  googleId: true,
+  profilePicture: true,
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;

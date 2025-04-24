@@ -4,8 +4,10 @@ import {
   type InsertUser, 
   meals, 
   type Meal, 
-  type InsertMeal 
+  type InsertMeal,
+  insertGoogleUserSchema
 } from "@shared/schema";
+import { z } from "zod";
 import { db } from "./db";
 import { eq, and, gte, lte } from "drizzle-orm";
 
@@ -13,7 +15,9 @@ export interface IStorage {
   // User methods from original file
   getUser(id: number): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  getUserByGoogleId(googleId: string): Promise<User | undefined>;
+  createUser(user: InsertUser | z.infer<typeof insertGoogleUserSchema>): Promise<User>;
+  updateUser(id: number, userData: Partial<User>): Promise<User | undefined>;
   
   // Meal methods
   getMealsByDate(date: Date, userId?: number): Promise<Meal[]>;
@@ -33,13 +37,30 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db.select().from(users).where(eq(users.email, email));
     return user || undefined;
   }
+  
+  async getUserByGoogleId(googleId: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.googleId, googleId));
+    return user || undefined;
+  }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
+  async createUser(insertUser: InsertUser | z.infer<typeof insertGoogleUserSchema>): Promise<User> {
     const [user] = await db
       .insert(users)
       .values(insertUser)
       .returning();
     return user;
+  }
+  
+  async updateUser(id: number, userData: Partial<User>): Promise<User | undefined> {
+    const [updatedUser] = await db
+      .update(users)
+      .set({
+        ...userData,
+        lastLogin: new Date()
+      })
+      .where(eq(users.id, id))
+      .returning();
+    return updatedUser || undefined;
   }
 
   async getMealsByDate(date: Date, userId?: number): Promise<Meal[]> {
