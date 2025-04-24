@@ -43,8 +43,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create date object (we'll adjust for Eastern time in the storage layer)
       const date = new Date(dateStr + 'T00:00:00Z');
       
+      // Force the year to be 2025 if not specified in the query
+      if (!req.query.date) {
+        date.setFullYear(2025);
+      }
+      
       // Add logging to help with debugging
-      console.log(`Fetching meals for date: ${dateStr}, parsed as: ${date.toISOString()}`);
+      console.log(`Fetching meals for date: ${dateStr}, using date: ${date.toISOString()}`);
       
       if (isNaN(date.getTime())) {
         return res.status(400).json({ message: "Invalid date format. Use ISO format (YYYY-MM-DD)" });
