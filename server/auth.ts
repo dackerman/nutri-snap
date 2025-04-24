@@ -94,15 +94,16 @@ export function setupAuth(app: Express) {
   if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
     console.log('Setting up Google OAuth strategy');
     // Get the Replit domain from the environment or use localhost for development
-    const replit_id = process.env.REPL_ID || '';
-    const replit_slug = process.env.REPL_SLUG || 'workspace';
-    const replit_owner = process.env.REPL_OWNER || '';
+    // For debugging, output the actual domain
+    console.log('REPL_ID:', process.env.REPL_ID);
+    console.log('REPL_SLUG:', process.env.REPL_SLUG);
+    console.log('REPL_OWNER:', process.env.REPL_OWNER);
     
-    const callbackURL = process.env.NODE_ENV === 'production'
-      ? `https://${replit_slug}.${replit_owner}.repl.co/api/auth/google/callback`
-      : replit_id 
-        ? `https://${replit_id}.id.repl.co/api/auth/google/callback`
-        : 'http://localhost:5000/api/auth/google/callback';
+    // Get hostname from request object (will be used in Google routes)
+    let callbackURL = 'http://localhost:5000/api/auth/google/callback';
+    
+    // The actual callback URL will be constructed at request time
+    // using the host header from the client's request
       
     passport.use(
       new GoogleStrategy(
@@ -251,6 +252,21 @@ export function setupAuth(app: Express) {
         message: 'The server administrator needs to set up Google OAuth credentials'
       });
     }
+    
+    // Get host from request
+    const protocol = req.protocol || 'http';
+    const host = req.get('host') || 'localhost:5000';
+    const dynamicCallbackURL = `${protocol}://${host}/api/auth/google/callback`;
+    console.log('Dynamic callback URL:', dynamicCallbackURL);
+    
+    // Use the dynamic callback URL
+    const googleStrategy = passport._strategies.google;
+    if (googleStrategy) {
+      googleStrategy._callbackURL = dynamicCallbackURL;
+    } else {
+      console.error('Google strategy not found in passport!');
+    }
+    
     passport.authenticate('google', { scope: ['profile', 'email'] })(req, res, next);
   });
   
