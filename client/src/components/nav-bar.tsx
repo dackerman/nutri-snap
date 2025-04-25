@@ -14,10 +14,6 @@ export default function NavBar() {
   return (
     <nav className="bg-white border-t border-gray-200 shadow-sm fixed bottom-0 left-0 right-0 z-10">
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-center py-1 border-b border-gray-100">
-          <img src={nutriSnapLogo} alt="NutriSnap" className="w-5 h-5 mr-1" />
-          <span className="text-xs font-medium text-primary-dark">NutriSnap</span>
-        </div>
         <div className="flex justify-around">
           <button 
             className={`py-3 px-5 flex flex-col items-center ${location === '/' ? 'text-primary' : 'text-gray-500'}`}
