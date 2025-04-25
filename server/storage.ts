@@ -100,16 +100,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createMeal(insertMeal: InsertMeal): Promise<Meal> {
-    // Extract the date portion (YYYY-MM-DD) for localDate
-    const now = new Date();
-    const localDate = new Date(now.toISOString().split('T')[0]);
-    
+    // The timestamp will be set from the route handler or default to now
+    // localDate is set in the route handler
     const [meal] = await db
       .insert(meals)
       .values({
         ...insertMeal,
-        timestamp: now,
-        localDate: localDate // Store just the date part
+        // Only set timestamp if not already provided in insertMeal
+        timestamp: insertMeal.timestamp || new Date()
       })
       .returning();
     return meal;

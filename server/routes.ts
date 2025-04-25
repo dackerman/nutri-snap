@@ -43,14 +43,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get date from query parameter or use current date
       const dateStr = req.query.date as string || new Date().toISOString().split('T')[0];
       
-      // Get timezone offset in minutes from the request
-      const timezoneOffset = parseInt(req.query.tzOffset as string || '0');
-      
-      // Create date object based on the provided date string, at 00:00:00 local time
-      const date = new Date(dateStr + 'T00:00:00Z');
+      // Create date object based on the provided date string
+      const date = new Date(dateStr);
       
       // Add logging to help with debugging
-      console.log(`Fetching meals for date: ${dateStr}, with timezone offset: ${timezoneOffset}, parsed as: ${date.toISOString()}`);
+      console.log(`Fetching meals for date: ${dateStr}, parsed as: ${date.toISOString()}`);
       
       if (isNaN(date.getTime())) {
         return res.status(400).json({ message: "Invalid date format. Use ISO format (YYYY-MM-DD)" });
@@ -58,7 +55,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // If user is logged in, filter by userId
       const userId = req.isAuthenticated() ? req.user?.id : undefined;
-      const meals = await storage.getMealsByDate(date, userId, timezoneOffset);
+      const meals = await storage.getMealsByDate(date, userId);
       
       console.log(`Found ${meals.length} meals for date ${dateStr}`);
       res.json(meals);
@@ -130,9 +127,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get the meal data from the request
       // Parse date from request if provided, otherwise use current time
       let timestamp = new Date();
+      // Extract the local date (just the date part, no time)
+      let localDate = new Date(timestamp.toISOString().split('T')[0]);
+      
       if (req.body.date) {
         try {
           timestamp = new Date(req.body.date);
+          // Update localDate when a specific date is provided
+          localDate = new Date(timestamp.toISOString().split('T')[0]);
+          console.log(`Using provided date: ${req.body.date}, parsed as timestamp: ${timestamp.toISOString()}, localDate: ${localDate.toISOString()}`);
         } catch (error) {
           console.warn("Invalid date format provided, using current time instead");
         }
@@ -142,7 +145,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId: req.user?.id,
         mealType: req.body.mealType,
         foodName: req.body.foodName || "",
-        timestamp, // Add custom timestamp
+        timestamp, // Full timestamp with time
+        localDate, // Just the date part for easier querying
         brandName: req.body.brandName || "",
         description: req.body.description || "",
         imageUrl: "", // Will be populated with images
@@ -315,6 +319,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Copy existing meal data so we can modify it before saving
       const mealData = { ...existingMeal, ...updates };
+      
+      // If timestamp is being updated, also update the localDate
+      if (updates.timestamp) {
+        const newDate = new Date(updates.timestamp);
+        if (!isNaN(newDate.getTime())) {
+          mealData.localDate = new Date(newDate.toISOString().split('T')[0]);
+          console.log(`Updating meal ${id} with new timestamp: ${newDate.toISOString()}, localDate: ${mealData.localDate.toISOString()}`);
+        }
+      }
       
       // Track if we need to trigger AI processing
       let needsReanalysis = false;
