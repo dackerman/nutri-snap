@@ -49,13 +49,15 @@ export const meals = pgTable("meals", {
   unit: text("unit"), // The unit of measurement (grams, ounces, count)
   analysisPending: boolean("analysis_pending").default(false), // Flag to indicate if analysis is in progress
   userProvidedImage: boolean("user_provided_image").default(false), // Flag to track if image was provided by user or AI generated
-  timestamp: timestamp("timestamp").defaultNow().notNull(),
+  timestamp: timestamp("timestamp").defaultNow().notNull(), // Still keep the original timestamp for time of day
+  localDate: timestamp("local_date"), // New field to store the user's local date without timezone issues
   // No physical storage of images, we're assuming imageUrl could be a data URI or a reference
 });
 
 export const insertMealSchema = createInsertSchema(meals).omit({ 
   id: true,
-  timestamp: true
+  timestamp: true,
+  localDate: true
 });
 
 export const mealAnalysisSchema = z.object({

@@ -485,14 +485,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get date from query parameter or use current date
       const dateStr = req.query.date as string || new Date().toISOString().split('T')[0];
       
-      // Get timezone offset in minutes from the request
-      const timezoneOffset = parseInt(req.query.tzOffset as string || '0');
-      
       // Create date object based on the provided date string
-      const date = new Date(dateStr + 'T00:00:00Z');
+      const date = new Date(dateStr);
       
       // Add logging to help with debugging
-      console.log(`Calculating summary for date: ${dateStr}, with timezone offset: ${timezoneOffset}, parsed as: ${date.toISOString()}`);
+      console.log(`Calculating summary for date: ${dateStr}, parsed as: ${date.toISOString()}`);
       
       if (isNaN(date.getTime())) {
         return res.status(400).json({ message: "Invalid date format. Use ISO format (YYYY-MM-DD)" });
@@ -500,7 +497,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Filter by logged in user if authenticated
       const userId = req.isAuthenticated() ? req.user?.id : undefined;
-      const meals = await storage.getMealsByDate(date, userId, timezoneOffset);
+      const meals = await storage.getMealsByDate(date, userId);
       
       const summary = meals.reduce((acc, meal) => {
         acc.calories += meal.calories || 0;
@@ -524,30 +521,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get year and month from query or use current date
       const yearParam = req.query.year ? parseInt(String(req.query.year)) : new Date().getFullYear();
       const monthParam = req.query.month ? parseInt(String(req.query.month)) - 1 : new Date().getMonth(); // 0-indexed
-      const tzOffset = req.query.tzOffset ? parseInt(String(req.query.tzOffset)) : new Date().getTimezoneOffset();
       
-      // Convert tzOffset from minutes to hours for easier calculations
-      const tzOffsetHours = tzOffset / 60;
+      // Start of month
+      const startOfMonth = new Date(yearParam, monthParam, 1);
       
-      // Start of month in user's local timezone
-      const startOfMonthLocal = new Date(Date.UTC(
-        yearParam, 
-        monthParam, 
-        1, 
-        -tzOffsetHours, // Adjust for timezone
-        0, 0, 0
-      ));
+      // End of month
+      const endOfMonth = new Date(yearParam, monthParam + 1, 0);
       
-      // End of month in user's local timezone
-      const endOfMonthLocal = new Date(Date.UTC(
-        yearParam, 
-        monthParam + 1, 
-        0, 
-        24 - tzOffsetHours - 1, // End of day adjusted for timezone
-        59, 59, 999
-      ));
-      
-      console.log(`Fetching month summary from ${startOfMonthLocal.toISOString()} to ${endOfMonthLocal.toISOString()}, TZ offset: ${tzOffset} minutes`);
+      console.log(`Fetching month summary from ${startOfMonth.toISOString()} to ${endOfMonth.toISOString()}`);
       
       // Require authentication for this endpoint
       if (!req.isAuthenticated()) {
@@ -556,14 +537,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const userId = req.user?.id;
       
-      // Use the indexes we created for better performance
+      // Use the new localDate field for more accurate date matching
       const mealsForMonth = await db
         .select()
         .from(meals)
         .where(and(
           eq(meals.userId, userId),
-          gte(meals.timestamp, startOfMonthLocal),
-          lte(meals.timestamp, endOfMonthLocal)
+          gte(meals.localDate, startOfMonth),
+          lte(meals.localDate, endOfMonth)
         ));
       
       console.log(`Found ${mealsForMonth.length} meals for the month`);
@@ -578,12 +559,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         dailySummaries[dateKey] = { calories: 0, fat: 0, carbs: 0, protein: 0 };
       }
       
-      // Sum up nutritional values by date (group by local date)
+      // Sum up nutritional values by date using localDate directly
       mealsForMonth.forEach(meal => {
-        const mealDate = new Date(meal.timestamp);
-        // Apply timezone offset to get the correct local day
-        const adjustedDate = new Date(mealDate.getTime() - tzOffset * 60 * 1000);
-        const dateKey = format(adjustedDate, 'yyyy-MM-dd');
+        if (!meal.localDate) return; // Skip if localDate is not set
+        
+        const dateKey = format(new Date(meal.localDate), 'yyyy-MM-dd');
         
         if (!dailySummaries[dateKey]) {
           dailySummaries[dateKey] = { calories: 0, fat: 0, carbs: 0, protein: 0 };

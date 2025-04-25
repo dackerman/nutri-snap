@@ -66,34 +66,14 @@ export class DatabaseStorage implements IStorage {
   async getMealsByDate(date: Date, userId?: number, tzOffset: number = 0): Promise<Meal[]> {
     console.log(`In storage.getMealsByDate with date: ${date.toISOString()}, tzOffset: ${tzOffset} minutes`);
     
-    // Convert tzOffset from minutes to hours for easier calculations
-    const tzOffsetHours = tzOffset / 60;
+    // Format the local date to YYYY-MM-DD
+    const localDateStr = date.toISOString().split('T')[0];
+    const localDate = new Date(localDateStr);
     
-    // Calculate start of day in user's local timezone
-    // We adjust by the timezone offset to get the correct UTC time that corresponds to midnight in the user's timezone
-    const startOfDay = new Date(Date.UTC(
-      date.getUTCFullYear(),
-      date.getUTCMonth(), 
-      date.getUTCDate(),
-      -tzOffsetHours, // Convert from local midnight to UTC
-      0, 0, 0
-    ));
-    
-    // End of day in user's local timezone (23:59:59.999)
-    const endOfDay = new Date(Date.UTC(
-      date.getUTCFullYear(),
-      date.getUTCMonth(), 
-      date.getUTCDate(),
-      24 - tzOffsetHours - 1, // Convert from local 11:59 PM to UTC
-      59, 59, 999
-    ));
-    
-    // Debug logs
-    console.log(`Timezone adjusted date range: ${startOfDay.toISOString()} - ${endOfDay.toISOString()}`);
+    console.log(`Looking for meals with local date: ${localDateStr}`);
     
     let conditions = [
-      gte(meals.timestamp, startOfDay),
-      lte(meals.timestamp, endOfDay)
+      eq(meals.localDate, localDate)
     ];
     
     // If userId is provided, add it to the conditions
@@ -120,11 +100,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createMeal(insertMeal: InsertMeal): Promise<Meal> {
+    // Extract the date portion (YYYY-MM-DD) for localDate
+    const now = new Date();
+    const localDate = new Date(now.toISOString().split('T')[0]);
+    
     const [meal] = await db
       .insert(meals)
       .values({
         ...insertMeal,
-        timestamp: new Date()
+        timestamp: now,
+        localDate: localDate // Store just the date part
       })
       .returning();
     return meal;
