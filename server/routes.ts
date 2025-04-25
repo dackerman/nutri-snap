@@ -576,16 +576,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       mealsForMonth.forEach(meal => {
         if (!meal.localDate) return; // Skip if localDate is not set
         
-        const dateKey = format(new Date(meal.localDate), 'yyyy-MM-dd');
-        
-        if (!dailySummaries[dateKey]) {
-          dailySummaries[dateKey] = { calories: 0, fat: 0, carbs: 0, protein: 0 };
+        try {
+          // Make sure we have a valid date before formatting
+          const localDate = new Date(meal.localDate);
+          if (isNaN(localDate.getTime())) {
+            console.log(`Skipping meal ${meal.id} with invalid localDate: ${meal.localDate}`);
+            return;
+          }
+          
+          const dateKey = format(localDate, 'yyyy-MM-dd');
+          
+          if (!dailySummaries[dateKey]) {
+            dailySummaries[dateKey] = { calories: 0, fat: 0, carbs: 0, protein: 0 };
+          }
+          
+          dailySummaries[dateKey].calories += meal.calories || 0;
+          dailySummaries[dateKey].fat += meal.fat || 0;
+          dailySummaries[dateKey].carbs += meal.carbs || 0;
+          dailySummaries[dateKey].protein += meal.protein || 0;
+        } catch (err) {
+          console.error(`Error processing meal ${meal.id}:`, err);
         }
-        
-        dailySummaries[dateKey].calories += meal.calories || 0;
-        dailySummaries[dateKey].fat += meal.fat || 0;
-        dailySummaries[dateKey].carbs += meal.carbs || 0;
-        dailySummaries[dateKey].protein += meal.protein || 0;
       });
       
       res.json(dailySummaries);
